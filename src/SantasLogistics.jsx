@@ -238,6 +238,7 @@ export default function SantasLogistics() {
   const [stationProgress, setStationProgress] = useState({});
   const [workshopJobs, setWorkshopJobs] = useState({});
   const [ordersCompleted, setOrdersCompleted] = useState(0);
+  const [sadChildren, setSadChildren] = useState(0);
   const [orderCount, setOrderCount] = useState(0);
 
   const [totalScore, setTotalScore] = useState(0);
@@ -288,6 +289,7 @@ export default function SantasLogistics() {
     setStationProgress({});
     setWorkshopJobs({});
     setOrdersCompleted(0);
+    setSadChildren(0);
     setOrderCount(0);
     setEraScore(0);
     setExpandedOrder(null);
@@ -323,7 +325,12 @@ export default function SantasLogistics() {
       });
 
       setOrders(prevOrders => {
-        let newOrders = prevOrders.map(order => ({ ...order, timeLeft: order.timeLeft - 1 })).filter(order => order.timeLeft > 0);
+        const updatedOrders = prevOrders.map(order => ({ ...order, timeLeft: order.timeLeft - 1 }));
+        const expiredCount = updatedOrders.filter(order => order.timeLeft <= 0 && order.status !== 'done').length;
+        if (expiredCount > 0) {
+          pendingCompletions.current.expired = (pendingCompletions.current.expired || 0) + expiredCount;
+        }
+        let newOrders = updatedOrders.filter(order => order.timeLeft > 0);
         const claimedOrderIds = new Set();
 
         setWorkshopJobs(prevJobs => {
@@ -398,22 +405,34 @@ export default function SantasLogistics() {
       // Capture values now to avoid race condition with ref reset
       const completedCount = pendingCompletions.current.count;
       const completedScore = pendingCompletions.current.score;
+      const expiredCount = pendingCompletions.current.expired || 0;
       setTimeout(() => {
         if (completedCount > 0) {
           setOrdersCompleted(c => c + completedCount);
           setEraScore(s => s + completedScore);
           setTotalScore(s => s + completedScore);
         }
+        if (expiredCount > 0) {
+          setSadChildren(c => c + expiredCount);
+        }
       }, 0);
     }, TICK_RATE);
     return () => clearInterval(interval);
   }, [gamePhase, grid, assignedElves]);
+
+  const MAX_SAD_CHILDREN = 5;
 
   useEffect(() => {
     if (gamePhase === 'playing' && ordersCompleted >= currentEra.ordersToWin) {
       setGamePhase('eraComplete');
     }
   }, [ordersCompleted, gamePhase, currentEra]);
+
+  useEffect(() => {
+    if (gamePhase === 'playing' && sadChildren >= MAX_SAD_CHILDREN) {
+      setGamePhase('christmasRuined');
+    }
+  }, [sadChildren, gamePhase]);
 
   useEffect(() => {
     if (gamePhase !== 'playing') return;
@@ -624,6 +643,38 @@ export default function SantasLogistics() {
     );
   }
 
+  if (gamePhase === 'christmasRuined') {
+    return (
+      <div className="h-screen overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-blue-900 flex items-center justify-center p-4">
+        <div className="bg-gray-800 border-4 border-red-500 rounded-xl p-6 text-center shadow-2xl max-w-md relative z-10">
+          <h1 className="text-3xl font-bold text-red-400 mb-2">😢 Christmas is Ruined! 😢</h1>
+          <p className="text-gray-300 mb-4">{currentEra.name}</p>
+          <div className="bg-gray-900/50 rounded-lg p-4 mb-4">
+            <div className="text-gray-200 space-y-2">
+              <p>Too many children were left without toys...</p>
+              <p>Sad Children: <strong className="text-red-400">{sadChildren}</strong></p>
+              <p>Orders Completed: <strong className="text-yellow-300">{ordersCompleted}/{currentEra.ordersToWin}</strong></p>
+            </div>
+          </div>
+          <div className="flex gap-3 justify-center">
+            <button onClick={() => {
+              startEra();
+            }} className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-full text-lg transition-all transform hover:scale-105 shadow-lg">
+              🔄 Try Again
+            </button>
+            <button onClick={() => {
+              setGamePhase('menu');
+              setTotalScore(0);
+              setCurrentEraIndex(0);
+            }} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-full text-lg transition-all transform hover:scale-105 shadow-lg">
+              🏠 Menu
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (gamePhase === 'gameWon') {
     return (
       <div className="h-screen overflow-hidden bg-gradient-to-b from-yellow-600 via-yellow-500 to-orange-500 flex items-center justify-center p-4">
@@ -666,6 +717,7 @@ export default function SantasLogistics() {
         <div className="flex gap-2 items-center text-xs">
           <div className="bg-green-800 px-2 py-1 rounded text-white">🧝 {elves}</div>
           <div className="bg-blue-800 px-2 py-1 rounded text-white">🎯 {ordersCompleted}/{currentEra.ordersToWin}</div>
+          <div className={`px-2 py-1 rounded text-white ${sadChildren >= 3 ? 'bg-red-600' : 'bg-gray-600'}`}>😢 {sadChildren}/{MAX_SAD_CHILDREN}</div>
           <div className="bg-yellow-600 px-2 py-1 rounded text-white">⭐ {totalScore}</div>
         </div>
       </div>
