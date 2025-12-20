@@ -286,6 +286,7 @@ export default function SantasLogistics() {
     setResources(getInitialResources(era));
     setOrders([]);
     ordersRef.current = [];
+    pendingCompletions.current = { count: 0, score: 0 };
     setElves(unassignedElves);
     setAssignedElves(newAssignedElves);
     setStationProgress({});
@@ -302,9 +303,6 @@ export default function SantasLogistics() {
   useEffect(() => {
     if (gamePhase !== 'playing') return;
     const interval = setInterval(() => {
-      // Reset pending completions for this tick
-      pendingCompletions.current = { count: 0, score: 0 };
-
       // Count expired orders synchronously using ref (React 18 batches setState)
       const expiringOrders = ordersRef.current.filter(order => order.timeLeft <= 1 && order.status !== 'done');
       const expiredThisTick = expiringOrders.length;
@@ -406,10 +404,13 @@ export default function SantasLogistics() {
       });
 
       // Flush pending completions after all state updates
-      // Capture values now to avoid race condition with ref reset
-      const completedCount = pendingCompletions.current.count;
-      const completedScore = pendingCompletions.current.score;
+      // Read inside setTimeout so React has processed the setState callbacks
       setTimeout(() => {
+        const completedCount = pendingCompletions.current.count;
+        const completedScore = pendingCompletions.current.score;
+        // Reset after reading
+        pendingCompletions.current = { count: 0, score: 0 };
+
         if (completedCount > 0) {
           setOrdersCompleted(c => c + completedCount);
           setEraScore(s => s + completedScore);
