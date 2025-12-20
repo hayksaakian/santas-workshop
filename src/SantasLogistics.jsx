@@ -164,7 +164,7 @@ const ERAS = [
   },
   {
     id: '2010s', name: '2010s - Tablet Era', description: 'Touchscreens everywhere',
-    elves: 8, orderTime: 60, ordersToWin: 22, resources: ['plastic', 'fabric', 'batteries', 'microchip', 'stuffing', 'screen'],
+    elves: 8, orderTime: 60, ordersToWin: 22, resources: ['plastic', 'fabric', 'paint', 'metal', 'batteries', 'microchip', 'stuffing', 'screen'],
     toys: {
       iPad: { name: 'iPad', icon: '📱', points: 250, recipe: { screen: 3, microchip: 4, batteries: 2 } },
       minecraftLego: { name: 'Minecraft LEGO', icon: '⛏️', points: 130, recipe: { plastic: 5, paint: 1 } },
