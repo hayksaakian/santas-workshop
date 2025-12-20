@@ -240,6 +240,7 @@ export default function SantasLogistics() {
   const [ordersCompleted, setOrdersCompleted] = useState(0);
   const [sadChildren, setSadChildren] = useState(0);
   const [orderCount, setOrderCount] = useState(0);
+  const [builtToys, setBuiltToys] = useState({});
 
   const [totalScore, setTotalScore] = useState(0);
   const [eraScore, setEraScore] = useState(0);
@@ -250,7 +251,7 @@ export default function SantasLogistics() {
   const [selectedTile, setSelectedTile] = useState(null);
 
   // Refs for tracking completions during tick (avoids nested setState issues)
-  const pendingCompletions = useRef({ count: 0, score: 0 });
+  const pendingCompletions = useRef({ count: 0, score: 0, toys: [] });
   const ordersRef = useRef([]);
 
   const currentEra = ERAS[currentEraIndex];
@@ -286,8 +287,9 @@ export default function SantasLogistics() {
     setResources(getInitialResources(era));
     setOrders([]);
     ordersRef.current = [];
-    pendingCompletions.current = { count: 0, score: 0 };
+    pendingCompletions.current = { count: 0, score: 0, toys: [] };
     setElves(unassignedElves);
+    setBuiltToys({});
     setAssignedElves(newAssignedElves);
     setStationProgress({});
     setWorkshopJobs({});
@@ -358,6 +360,7 @@ export default function SantasLogistics() {
                         // Track in ref instead of nested setState
                         pendingCompletions.current.count += 1;
                         pendingCompletions.current.score += points;
+                        pendingCompletions.current.toys.push({ toyKey: o.toyKey, quantity: o.quantity });
                         return { ...o, completed: newCompleted, status: 'done' };
                       }
                       return { ...o, completed: newCompleted };
@@ -408,13 +411,22 @@ export default function SantasLogistics() {
       setTimeout(() => {
         const completedCount = pendingCompletions.current.count;
         const completedScore = pendingCompletions.current.score;
+        const completedToys = pendingCompletions.current.toys;
         // Reset after reading
-        pendingCompletions.current = { count: 0, score: 0 };
+        pendingCompletions.current = { count: 0, score: 0, toys: [] };
 
         if (completedCount > 0) {
           setOrdersCompleted(c => c + completedCount);
           setEraScore(s => s + completedScore);
           setTotalScore(s => s + completedScore);
+          // Add built toys to collection
+          setBuiltToys(prev => {
+            const updated = { ...prev };
+            completedToys.forEach(({ toyKey, quantity }) => {
+              updated[toyKey] = (updated[toyKey] || 0) + quantity;
+            });
+            return updated;
+          });
         }
         if (expiredThisTick > 0) {
           setSadChildren(c => c + expiredThisTick);
@@ -631,6 +643,7 @@ export default function SantasLogistics() {
   }
 
   if (gamePhase === 'eraComplete') {
+    const totalToysBuilt = Object.values(builtToys).reduce((sum, count) => sum + count, 0);
     return (
       <div className="h-screen overflow-hidden bg-gradient-to-b from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-4">
         <div className="bg-green-800 border-4 border-yellow-500 rounded-xl p-6 text-center shadow-2xl max-w-md relative z-10">
@@ -642,6 +655,19 @@ export default function SantasLogistics() {
               <p>Era Score: <strong className="text-yellow-300">{eraScore}</strong></p>
               <p>Total Score: <strong className="text-yellow-300">{totalScore}</strong></p>
             </div>
+            {totalToysBuilt > 0 && (
+              <div className="mt-3 pt-3 border-t border-green-700">
+                <p className="text-green-300 text-sm mb-2">🎁 Toys Built: {totalToysBuilt}</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {Object.entries(builtToys).map(([toyKey, count]) => (
+                    <div key={toyKey} className="flex items-center bg-green-700/50 rounded-full px-2 py-1">
+                      <span className="text-lg">{currentEra.toys[toyKey]?.icon}</span>
+                      <span className="text-green-200 text-sm ml-1">×{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <button onClick={advanceEra} className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 shadow-lg">
             {currentEraIndex < ERAS.length - 1 ? '➡️ Next Era' : '🏆 See Results'}
@@ -737,6 +763,21 @@ export default function SantasLogistics() {
           </div>
         ))}
       </div>
+
+      {/* Toy Chest - shows built toys */}
+      {Object.keys(builtToys).length > 0 && (
+        <div className="flex-shrink-0 flex items-center gap-2 px-2 py-1 bg-green-900/60 border-b border-green-700 relative z-10">
+          <span className="text-xs text-green-300">🎁</span>
+          <div className="flex gap-1 flex-wrap">
+            {Object.entries(builtToys).map(([toyKey, count]) => (
+              <div key={toyKey} className="flex items-center bg-green-800/50 rounded px-1.5 py-0.5 text-xs">
+                <span>{currentEra.toys[toyKey]?.icon}</span>
+                <span className="text-green-200 ml-0.5">×{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col min-h-0 relative z-10">
         {/* Orders Panel - Horizontal */}
