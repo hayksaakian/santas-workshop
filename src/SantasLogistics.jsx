@@ -251,6 +251,7 @@ export default function SantasLogistics() {
 
   // Refs for tracking completions during tick (avoids nested setState issues)
   const pendingCompletions = useRef({ count: 0, score: 0 });
+  const ordersRef = useRef([]);
 
   const currentEra = ERAS[currentEraIndex];
   const availableStations = currentEra ? getStationsForEra(currentEra) : {};
@@ -284,6 +285,7 @@ export default function SantasLogistics() {
     setGrid(newGrid);
     setResources(getInitialResources(era));
     setOrders([]);
+    ordersRef.current = [];
     setElves(unassignedElves);
     setAssignedElves(newAssignedElves);
     setStationProgress({});
@@ -302,6 +304,10 @@ export default function SantasLogistics() {
     const interval = setInterval(() => {
       // Reset pending completions for this tick
       pendingCompletions.current = { count: 0, score: 0 };
+
+      // Count expired orders synchronously using ref (React 18 batches setState)
+      const expiringOrders = ordersRef.current.filter(order => order.timeLeft <= 1 && order.status !== 'done');
+      const expiredThisTick = expiringOrders.length;
 
       setStationProgress(prevProgress => {
         const newProgress = { ...prevProgress };
@@ -326,10 +332,6 @@ export default function SantasLogistics() {
 
       setOrders(prevOrders => {
         const updatedOrders = prevOrders.map(order => ({ ...order, timeLeft: order.timeLeft - 1 }));
-        const expiredCount = updatedOrders.filter(order => order.timeLeft <= 0 && order.status !== 'done').length;
-        if (expiredCount > 0) {
-          pendingCompletions.current.expired = (pendingCompletions.current.expired || 0) + expiredCount;
-        }
         let newOrders = updatedOrders.filter(order => order.timeLeft > 0);
         const claimedOrderIds = new Set();
 
@@ -398,22 +400,23 @@ export default function SantasLogistics() {
           });
           return newJobs;
         });
-        return newOrders.filter(o => o.status !== 'done');
+        const finalOrders = newOrders.filter(o => o.status !== 'done');
+        ordersRef.current = finalOrders; // Keep ref in sync
+        return finalOrders;
       });
 
       // Flush pending completions after all state updates
       // Capture values now to avoid race condition with ref reset
       const completedCount = pendingCompletions.current.count;
       const completedScore = pendingCompletions.current.score;
-      const expiredCount = pendingCompletions.current.expired || 0;
       setTimeout(() => {
         if (completedCount > 0) {
           setOrdersCompleted(c => c + completedCount);
           setEraScore(s => s + completedScore);
           setTotalScore(s => s + completedScore);
         }
-        if (expiredCount > 0) {
-          setSadChildren(c => c + expiredCount);
+        if (expiredThisTick > 0) {
+          setSadChildren(c => c + expiredThisTick);
         }
       }, 0);
     }, TICK_RATE);
@@ -440,13 +443,17 @@ export default function SantasLogistics() {
       setOrders(prev => {
         if (prev.length < 5) {
           setOrderCount(c => c + 1);
-          return [...prev, generateOrder(currentEra, orderCount)];
+          const newOrders = [...prev, generateOrder(currentEra, orderCount)];
+          ordersRef.current = newOrders;
+          return newOrders;
         }
         return prev;
       });
     }, 10000);
     if (orders.length === 0) {
-      setOrders([generateOrder(currentEra, 0), generateOrder(currentEra, 0)]);
+      const initialOrders = [generateOrder(currentEra, 0), generateOrder(currentEra, 0)];
+      ordersRef.current = initialOrders;
+      setOrders(initialOrders);
       setOrderCount(2);
     }
     return () => clearInterval(interval);
