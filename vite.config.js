@@ -3,5 +3,5 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/santas-workshop/',
+  // base: '/santas-workshop/', // Only needed for GitHub Pages
 })
