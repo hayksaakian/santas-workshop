@@ -395,11 +395,14 @@ export default function SantasLogistics() {
       });
 
       // Flush pending completions after all state updates
+      // Capture values now to avoid race condition with ref reset
+      const completedCount = pendingCompletions.current.count;
+      const completedScore = pendingCompletions.current.score;
       setTimeout(() => {
-        if (pendingCompletions.current.count > 0) {
-          setOrdersCompleted(c => c + pendingCompletions.current.count);
-          setEraScore(s => s + pendingCompletions.current.score);
-          setTotalScore(s => s + pendingCompletions.current.score);
+        if (completedCount > 0) {
+          setOrdersCompleted(c => c + completedCount);
+          setEraScore(s => s + completedScore);
+          setTotalScore(s => s + completedScore);
         }
       }, 0);
     }, TICK_RATE);
