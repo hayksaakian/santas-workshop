@@ -750,7 +750,6 @@ export default function SantasLogistics() {
         </div>
         <div className="flex gap-2 items-center text-xs">
           <div className="bg-green-800 px-2 py-1 rounded text-white">🧝 {elves}</div>
-          <div className="bg-blue-800 px-2 py-1 rounded text-white">🎯 {ordersCompleted}/{currentEra.ordersToWin}</div>
           <div className={`px-2 py-1 rounded text-white ${sadChildren >= 3 ? 'bg-red-600' : 'bg-gray-600'}`}>😢 {sadChildren}/{MAX_SAD_CHILDREN}</div>
           <div className="bg-yellow-600 px-2 py-1 rounded text-white">⭐ {totalScore}</div>
         </div>
@@ -764,20 +763,24 @@ export default function SantasLogistics() {
         ))}
       </div>
 
-      {/* Toy Chest - shows built toys */}
-      {Object.keys(builtToys).length > 0 && (
-        <div className="flex-shrink-0 flex items-center gap-2 px-2 py-1 bg-green-900/60 border-b border-green-700 relative z-10">
-          <span className="text-xs text-green-300">🎁</span>
-          <div className="flex gap-1 flex-wrap">
-            {Object.entries(builtToys).map(([toyKey, count]) => (
-              <div key={toyKey} className="flex items-center bg-green-800/50 rounded px-1.5 py-0.5 text-xs">
-                <span>{currentEra.toys[toyKey]?.icon}</span>
-                <span className="text-green-200 ml-0.5">×{count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Toy Chest - shows goal and built toys */}
+      <div className="flex-shrink-0 flex items-center gap-2 px-2 py-1 bg-green-900/60 border-b border-green-700 relative z-10">
+        <div className="bg-blue-700 px-2 py-0.5 rounded text-white text-xs font-bold">🎯 {ordersCompleted}/{currentEra.ordersToWin}</div>
+        {Object.keys(builtToys).length > 0 && (
+          <>
+            <span className="text-green-500">|</span>
+            <span className="text-xs text-green-300">🎁</span>
+            <div className="flex gap-1 flex-wrap">
+              {Object.entries(builtToys).map(([toyKey, count]) => (
+                <div key={toyKey} className="flex items-center bg-green-800/50 rounded px-1.5 py-0.5 text-xs">
+                  <span>{currentEra.toys[toyKey]?.icon}</span>
+                  <span className="text-green-200 ml-0.5">×{count}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="flex-1 flex flex-col min-h-0 relative z-10">
         {/* Orders Panel - Horizontal */}
