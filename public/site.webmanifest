@@ -1,0 +1,16 @@
+{
+  "name": "Santa's Logistics",
+  "short_name": "Santa's Workshop",
+  "description": "Guide Santa's workshop through 15 decades of toy-making history!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e3a5f",
+  "theme_color": "#991b1b",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
