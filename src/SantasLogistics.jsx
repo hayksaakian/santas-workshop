@@ -84,7 +84,7 @@ const ERAS = [
   },
   {
     id: '1930s', name: '1930s - Depression Era', description: 'Board games and affordable toys',
-    elves: 5, orderTime: 80, ordersToWin: 14, resources: ['wood', 'fabric', 'paint', 'metal', 'rubber', 'plastic'],
+    elves: 5, orderTime: 80, ordersToWin: 14, resources: ['wood', 'fabric', 'paint', 'metal', 'rubber', 'plastic', 'stuffing'],
     toys: {
       monopoly: { name: 'Monopoly', icon: '🎩', points: 100, recipe: { wood: 1, paint: 2, metal: 1 } },
       radioFlyer: { name: 'Radio Flyer', icon: '🛷', points: 140, recipe: { metal: 4, paint: 2, rubber: 1 } },
@@ -154,7 +154,7 @@ const ERAS = [
   },
   {
     id: '2000s', name: '2000s - Internet Age', description: 'Connected toys and MP3 players',
-    elves: 8, orderTime: 65, ordersToWin: 20, resources: ['plastic', 'fabric', 'batteries', 'microchip', 'stuffing', 'screen'],
+    elves: 8, orderTime: 65, ordersToWin: 20, resources: ['plastic', 'fabric', 'paint', 'batteries', 'microchip', 'stuffing', 'screen'],
     toys: {
       iPod: { name: 'iPod', icon: '🎵', points: 200, recipe: { plastic: 2, microchip: 3, batteries: 2, screen: 2 } },
       xbox: { name: 'Xbox', icon: '🎮', points: 250, recipe: { plastic: 3, microchip: 5, batteries: 1 } },
