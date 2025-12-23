@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   RESOURCES,
   STATIONS,
@@ -56,6 +56,26 @@ export default function SantasLogistics() {
   const pendingCompletions = useRef({ count: 0, score: 0, toys: [] });
   const ordersRef = useRef([]);
   const prevSadChildren = useRef(0);
+
+  // Memoize snowflake positions so they don't reset on every render
+  const snowflakes = useMemo(() =>
+    [...Array(30)].map((_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      duration: 5 + Math.random() * 5,
+      delay: Math.random() * 5,
+      size: Math.random() * 8 + 6,
+    })), []);
+
+  // Menu screen snowflakes (stationary, pulsing)
+  const menuSnowflakes = useMemo(() =>
+    [...Array(50)].map((_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      delay: Math.random() * 3,
+      size: Math.random() * 10 + 8,
+    })), []);
 
   const currentEra = ERAS[currentEraIndex];
   const availableStations = currentEra ? getStationsForEra(currentEra) : {};
@@ -373,9 +393,9 @@ export default function SantasLogistics() {
     return (
       <div className="h-screen overflow-hidden bg-gradient-to-b from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-4">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(50)].map((_, i) => (
-            <div key={i} className="absolute text-white opacity-60 animate-pulse"
-              style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`, animationDelay: `${Math.random() * 3}s`, fontSize: `${Math.random() * 10 + 8}px` }}>❄</div>
+          {menuSnowflakes.map((flake) => (
+            <div key={flake.id} className="absolute text-white opacity-60 animate-pulse"
+              style={{ left: `${flake.left}%`, top: `${flake.top}%`, animationDelay: `${flake.delay}s`, fontSize: `${flake.size}px` }}>❄</div>
           ))}
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
@@ -548,9 +568,9 @@ export default function SantasLogistics() {
   return (
     <div className="h-screen overflow-hidden bg-gradient-to-b from-blue-900 via-blue-800 to-indigo-900 flex flex-col">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {[...Array(30)].map((_, i) => (
-          <div key={i} className="absolute text-white opacity-40"
-            style={{ left: `${Math.random() * 100}%`, top: `-20px`, animation: `fall ${5 + Math.random() * 5}s linear infinite`, animationDelay: `${Math.random() * 5}s`, fontSize: `${Math.random() * 8 + 6}px` }}>❄</div>
+        {snowflakes.map((flake) => (
+          <div key={flake.id} className="absolute text-white opacity-40"
+            style={{ left: `${flake.left}%`, top: `-20px`, animation: `fall ${flake.duration}s linear infinite`, animationDelay: `${flake.delay}s`, fontSize: `${flake.size}px` }}>❄</div>
         ))}
       </div>
       <style>{`
