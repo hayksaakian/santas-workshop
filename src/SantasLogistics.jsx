@@ -8,6 +8,7 @@ import {
   GRID_SIZE,
   TICK_RATE,
   MAX_SAD_CHILDREN,
+  CHILDREN_NAMES,
 } from './gameData';
 
 // ============================================
@@ -19,9 +20,10 @@ const generateOrder = (era, orderCount) => {
   const toyKey = toyKeys[Math.floor(Math.random() * toyKeys.length)];
   const toy = era.toys[toyKey];
   const quantity = 1 + Math.floor(orderCount / 8);
+  const childName = CHILDREN_NAMES[Math.floor(Math.random() * CHILDREN_NAMES.length)];
   return {
     id: Date.now() + Math.random(),
-    toyKey, toy, quantity,
+    toyKey, toy, quantity, childName,
     timeLeft: era.orderTime + Math.floor(Math.random() * 20),
     completed: 0,
   };
@@ -51,6 +53,9 @@ export default function SantasLogistics() {
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
   const [sadChildFlash, setSadChildFlash] = useState(false);
+  const [lastSadChild, setLastSadChild] = useState(null);
+  const [sadChildrenNames, setSadChildrenNames] = useState([]);
+  const [expiringOrderIds, setExpiringOrderIds] = useState([]);
 
   // Refs for tracking completions during tick (avoids nested setState issues)
   const pendingCompletions = useRef({ count: 0, score: 0, toys: [] });
@@ -118,6 +123,9 @@ export default function SantasLogistics() {
     setWorkshopJobs({});
     setOrdersCompleted(0);
     setSadChildren(0);
+    setSadChildrenNames([]);
+    setExpiringOrderIds([]);
+    setLastSadChild(null);
     prevSadChildren.current = 0;
     setOrderCount(0);
     setEraScore(0);
@@ -132,6 +140,13 @@ export default function SantasLogistics() {
       // Count expired orders synchronously using ref (React 18 batches setState)
       const expiringOrders = ordersRef.current.filter(order => order.timeLeft <= 1 && order.status !== 'done');
       const expiredThisTick = expiringOrders.length;
+      const expiredChildNames = expiringOrders.map(o => ({ name: o.childName, toy: o.toy.icon }));
+      const expiredIds = expiringOrders.map(o => o.id);
+
+      // Mark orders as expiring for animation
+      if (expiredIds.length > 0) {
+        setExpiringOrderIds(expiredIds);
+      }
 
       setStationProgress(prevProgress => {
         const newProgress = { ...prevProgress };
@@ -254,6 +269,13 @@ export default function SantasLogistics() {
         }
         if (expiredThisTick > 0) {
           setSadChildren(c => c + expiredThisTick);
+          setSadChildrenNames(prev => [...prev, ...expiredChildNames]);
+          // Set the last sad child for the toast
+          if (expiredChildNames.length > 0) {
+            setLastSadChild(expiredChildNames[expiredChildNames.length - 1]);
+          }
+          // Clear expiring IDs after a delay for animation
+          setTimeout(() => setExpiringOrderIds([]), 800);
         }
       }, 0);
     }, TICK_RATE);
@@ -518,9 +540,21 @@ export default function SantasLogistics() {
           <div className="bg-gray-900/50 rounded-lg p-4 mb-4">
             <div className="text-gray-200 space-y-2">
               <p>Too many children were left without toys...</p>
-              <p>Sad Children: <strong className="text-red-400">{sadChildren}</strong></p>
               <p>Orders Completed: <strong className="text-yellow-300">{ordersCompleted}/{currentEra.ordersToWin}</strong></p>
             </div>
+            {sadChildrenNames.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-gray-700">
+                <p className="text-red-400 text-sm mb-2">Children left without presents:</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {sadChildrenNames.map((child, idx) => (
+                    <div key={idx} className="flex items-center bg-red-900/50 rounded-full px-2 py-1 text-xs">
+                      <span className="text-red-300">{child.name}</span>
+                      <span className="ml-1">{child.toy}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex gap-3 justify-center">
             <button onClick={() => {
@@ -585,13 +619,21 @@ export default function SantasLogistics() {
           0% { opacity: 1; transform: translateY(0) scale(1); }
           100% { opacity: 0; transform: translateY(-60px) scale(1.5); }
         }
+        @keyframes orderExpire {
+          0% { transform: scale(1) rotate(0deg); opacity: 1; }
+          20% { transform: scale(1.1) rotate(-5deg); }
+          40% { transform: scale(1.1) rotate(5deg); }
+          60% { transform: scale(1.05) rotate(-3deg); }
+          80% { transform: scale(1.1) rotate(2deg); opacity: 0.7; }
+          100% { transform: scale(0.8) translateY(-20px); opacity: 0; }
+        }
       `}</style>
 
       {/* Sad child toast notification */}
-      {sadChildFlash && (
+      {sadChildFlash && lastSadChild && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
           <div className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-bold animate-bounce">
-            😢 Order expired! A child is sad...
+            😢 {lastSadChild.name} didn't get their {lastSadChild.toy}!
           </div>
         </div>
       )}
@@ -654,13 +696,16 @@ export default function SantasLogistics() {
                 const isExpanded = expandedOrder === order.id;
                 const canAfford = canAffordRecipe(order.toy.recipe);
                 const isCrafting = Object.values(workshopJobs).some(job => job && job.orderId === order.id);
+                const isExpiring = expiringOrderIds.includes(order.id);
                 return (
                   <div key={order.id} onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                    className={`flex-shrink-0 rounded-lg p-2 border text-xs cursor-pointer transition-all ${isCrafting ? 'bg-yellow-900/50 border-yellow-500' : canAfford ? 'bg-green-900/40 border-green-600' : 'bg-red-950/30 border-red-900/50 opacity-60'} ${isExpanded ? 'min-w-36' : 'min-w-20'}`}>
+                    className={`flex-shrink-0 rounded-lg p-2 border text-xs cursor-pointer transition-all ${isCrafting ? 'bg-yellow-900/50 border-yellow-500' : canAfford ? 'bg-green-900/40 border-green-600' : 'bg-red-950/30 border-red-900/50 opacity-60'} ${isExpanded ? 'min-w-36' : 'min-w-20'}`}
+                    style={isExpiring ? { animation: 'orderExpire 0.8s ease-out forwards', backgroundColor: '#dc2626', borderColor: '#dc2626' } : {}}>
                     <div className="flex justify-between items-center gap-2">
                       <span className="text-white font-bold">{order.toy.icon} x{order.quantity}</span>
                       <span className={`font-mono text-xs ${order.timeLeft < 20 ? 'text-red-400' : 'text-green-400'}`}>{Math.round(order.timeLeft)}s</span>
                     </div>
+                    <div className="text-amber-300 text-xs truncate">For {order.childName}</div>
                     <div className="flex justify-between items-center mt-1">
                       <span className="text-gray-400">{order.completed}/{order.quantity}</span>
                       <span className={`px-1 rounded ${isCrafting ? 'bg-yellow-600 text-white' : canAfford ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-300'}`}>

@@ -222,4 +222,14 @@ export const getInitialResources = (era) => {
 
 export const GRID_SIZE = 6;
 export const TICK_RATE = 1000;
+
+// Children's names for orders
+export const CHILDREN_NAMES = [
+  'Timmy', 'Sally', 'Billy', 'Emma', 'Jack', 'Sophie', 'Oliver', 'Lily',
+  'Charlie', 'Mia', 'Henry', 'Ava', 'George', 'Ella', 'Oscar', 'Grace',
+  'Leo', 'Chloe', 'Max', 'Ruby', 'Archie', 'Ivy', 'Alfie', 'Freya',
+  'Noah', 'Zoe', 'Ethan', 'Luna', 'Lucas', 'Willow', 'James', 'Aria',
+  'Tommy', 'Rosie', 'Finn', 'Daisy', 'Jake', 'Poppy', 'Dylan', 'Bella',
+  'Liam', 'Molly', 'Owen', 'Evie', 'Ryan', 'Isla', 'Sam', 'Holly',
+];
 export const MAX_SAD_CHILDREN = 5;
