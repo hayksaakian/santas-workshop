@@ -50,10 +50,12 @@ export default function SantasLogistics() {
   const [helpModal, setHelpModal] = useState(false);
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
+  const [sadChildFlash, setSadChildFlash] = useState(false);
 
   // Refs for tracking completions during tick (avoids nested setState issues)
   const pendingCompletions = useRef({ count: 0, score: 0, toys: [] });
   const ordersRef = useRef([]);
+  const prevSadChildren = useRef(0);
 
   const currentEra = ERAS[currentEraIndex];
   const availableStations = currentEra ? getStationsForEra(currentEra) : {};
@@ -96,6 +98,7 @@ export default function SantasLogistics() {
     setWorkshopJobs({});
     setOrdersCompleted(0);
     setSadChildren(0);
+    prevSadChildren.current = 0;
     setOrderCount(0);
     setEraScore(0);
     setExpandedOrder(null);
@@ -247,6 +250,16 @@ export default function SantasLogistics() {
     if (gamePhase === 'playing' && sadChildren >= MAX_SAD_CHILDREN) {
       setGamePhase('christmasRuined');
     }
+  }, [sadChildren, gamePhase]);
+
+  // Flash animation when a child becomes sad
+  useEffect(() => {
+    if (sadChildren > prevSadChildren.current && gamePhase === 'playing') {
+      setSadChildFlash(true);
+      const timer = setTimeout(() => setSadChildFlash(false), 1500);
+      return () => clearTimeout(timer);
+    }
+    prevSadChildren.current = sadChildren;
   }, [sadChildren, gamePhase]);
 
   useEffect(() => {
@@ -540,7 +553,28 @@ export default function SantasLogistics() {
             style={{ left: `${Math.random() * 100}%`, top: `-20px`, animation: `fall ${5 + Math.random() * 5}s linear infinite`, animationDelay: `${Math.random() * 5}s`, fontSize: `${Math.random() * 8 + 6}px` }}>❄</div>
         ))}
       </div>
-      <style>{`@keyframes fall { to { transform: translateY(100vh); } }`}</style>
+      <style>{`
+        @keyframes fall { to { transform: translateY(100vh); } }
+        @keyframes sadPulse {
+          0%, 100% { transform: scale(1); }
+          25% { transform: scale(1.3); background-color: #dc2626; }
+          50% { transform: scale(1.1); }
+          75% { transform: scale(1.2); background-color: #dc2626; }
+        }
+        @keyframes floatUp {
+          0% { opacity: 1; transform: translateY(0) scale(1); }
+          100% { opacity: 0; transform: translateY(-60px) scale(1.5); }
+        }
+      `}</style>
+
+      {/* Sad child toast notification */}
+      {sadChildFlash && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+          <div className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-bold animate-bounce">
+            😢 Order expired! A child is sad...
+          </div>
+        </div>
+      )}
 
       <div className="flex-shrink-0 flex justify-between items-center px-3 py-2 bg-red-900/80 border-b-2 border-red-700 relative z-10">
         <div className="flex items-center gap-2">
@@ -549,7 +583,12 @@ export default function SantasLogistics() {
         </div>
         <div className="flex gap-2 items-center text-xs">
           <div className="bg-green-800 px-2 py-1 rounded text-white">🧝 {elves}</div>
-          <div className={`px-2 py-1 rounded text-white ${sadChildren >= 3 ? 'bg-red-600' : 'bg-gray-600'}`}>😢 {sadChildren}/{MAX_SAD_CHILDREN}</div>
+          <div
+            className={`px-2 py-1 rounded text-white transition-all ${sadChildren >= 3 ? 'bg-red-600' : 'bg-gray-600'}`}
+            style={sadChildFlash ? { animation: 'sadPulse 0.5s ease-in-out 3' } : {}}
+          >
+            😢 {sadChildren}/{MAX_SAD_CHILDREN}
+          </div>
           <div className="bg-yellow-600 px-2 py-1 rounded text-white">⭐ {totalScore}</div>
         </div>
       </div>
