@@ -32,7 +32,7 @@ export const STATIONS = {
 export const ERAS = [
   {
     id: 'Tutorial', name: '1870s - Tutorial', description: 'Learn the basics of toy making!',
-    elves: 3, orderTime: 120, ordersToWin: 4, resources: ['wood', 'fabric'],
+    elves: 2, orderTime: 120, ordersToWin: 4, resources: ['wood', 'fabric'],
     toys: {
       woodenBlock: { name: 'Wooden Blocks', icon: '🧊', points: 50, recipe: { wood: 2 } },
       simpleRagDoll: { name: 'Simple Doll', icon: '🪆', points: 60, recipe: { fabric: 2 } },
