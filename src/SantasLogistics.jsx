@@ -505,7 +505,7 @@ export default function SantasLogistics() {
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">🎅 Santa's Workshop Simulator 🎄</h1>
-          <p className="text-xs text-green-400 mb-1">v5 - idle walk fix</p>
+          <p className="text-xs text-green-400 mb-1">v6 - force reflow</p>
           <p className="text-green-300 italic mb-6">"Santa has magic delivery powers.<br/>You have the magic of logistics."</p>
           <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left text-green-100 text-sm">
             <p className="mb-3">Guide Santa's workshop through <strong className="text-yellow-300">15 decades</strong> of toy-making history!</p>
@@ -900,11 +900,11 @@ export default function SantasLogistics() {
                   }}
                   ref={(el) => {
                     if (el) {
-                      // Trigger animation after mount
-                      requestAnimationFrame(() => {
-                        el.style.left = `${elf.destLeft}px`;
-                        el.style.top = `${elf.destTop}px`;
-                      });
+                      // Force reflow to ensure initial position is painted before transition
+                      el.getBoundingClientRect();
+                      // Now set destination - transition will animate
+                      el.style.left = `${elf.destLeft}px`;
+                      el.style.top = `${elf.destTop}px`;
                       // Fade out at the end
                       setTimeout(() => {
                         el.style.opacity = '0';
