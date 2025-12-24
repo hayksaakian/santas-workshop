@@ -542,7 +542,7 @@ export default function SantasLogistics() {
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">🎅 Santa's Workshop Simulator 🎄</h1>
-          <p className="text-xs text-green-400 mb-1">v10 - improved station picker</p>
+          <p className="text-xs text-green-400 mb-1">v11 - workbench visual</p>
           <p className="text-green-300 italic mb-6">"Santa has magic delivery powers.<br/>You have the magic of logistics."</p>
           <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left text-green-100 text-sm">
             <p className="mb-3">Guide Santa's workshop through <strong className="text-yellow-300">15 decades</strong> of toy-making history!</p>
@@ -1024,7 +1024,23 @@ export default function SantasLogistics() {
                         ${cell ? `${station.color} ${isSelected ? 'border-white ring-2 ring-white' : 'border-amber-400 hover:border-yellow-300'}` : 'bg-amber-800/30 border-amber-700/50 hover:bg-amber-700/50 hover:border-amber-500'}`}>
                       {cell ? (
                         <>
-                          <span className="text-xl sm:text-2xl">{job ? currentEra.toys[job.toyKey]?.icon : station.icon}</span>
+                          {station.isWorkshop ? (
+                            /* Workshop: show workbench with toy on top when crafting */
+                            <div className="flex flex-col items-center justify-end h-full pb-1">
+                              {job ? (
+                                <span className="text-xl sm:text-2xl mb-0.5" style={{ animation: 'elfWork 0.5s ease-in-out infinite' }}>
+                                  {currentEra.toys[job.toyKey]?.icon}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-yellow-900/40 mb-1">⚒️</span>
+                              )}
+                              {/* Workbench surface */}
+                              <div className="w-4/5 h-1.5 bg-amber-800 rounded-sm border-t border-amber-600" />
+                            </div>
+                          ) : (
+                            /* Resource station: show station icon */
+                            <span className="text-xl sm:text-2xl">{station.icon}</span>
+                          )}
                           {elfCount > 0 && <span className="absolute top-0.5 right-0.5 text-xs sm:text-sm" style={{ animation: recentArrivals.has(key) ? 'elfAppear 0.2s ease-out forwards' : 'elfWork 0.5s ease-in-out infinite' }}>🧝</span>}
                           {!station.isWorkshop && progress > 0 && (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
