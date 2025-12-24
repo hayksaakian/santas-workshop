@@ -50,3 +50,15 @@
 - Touch and hold to pick up elf, drag to destination
 - Visual feedback during drag (elf follows finger)
 - Drop zones highlight when dragging
+
+### Observation 6: Station purposes unclear
+- It's not obvious what stations do generally
+- The crafting workshop isn't clearly different from resource gathering stations
+- Users don't understand the resource → crafting flow
+
+**Potential fixes:**
+- Visual distinction between station types (different shapes, borders, areas of grid)
+- Show input/output on stations (e.g., arrows showing what comes out)
+- Group resource stations separately from workshop benches
+- Add labels or tooltips explaining each station type
+- Maybe a dedicated "crafting area" vs "resource area" on the grid
