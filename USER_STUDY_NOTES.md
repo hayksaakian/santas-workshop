@@ -72,3 +72,15 @@
 - Flash or pulse on the resource counter when it increments
 - Sound effect on resource collection
 - Particle effect or sparkle at the station when complete
+
+### Observation 8: Grid size creates confusion
+- The large grid raises questions: "Am I supposed to fill up the whole grid?"
+- Unclear if filling the grid is a goal or even a good strategy
+- Grid size doesn't match the number of elves available
+
+**Potential fixes:**
+- Smaller grid that matches available elves/stations
+- Visual indication of "recommended" number of stations
+- Dynamically sized grid based on era/difficulty
+- Show empty slots differently (maybe grayed out or with a "locked" state)
+- Explain grid strategy in tutorial
