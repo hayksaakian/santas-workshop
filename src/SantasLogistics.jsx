@@ -499,7 +499,7 @@ export default function SantasLogistics() {
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">🎅 Santa's Workshop Simulator 🎄</h1>
-          <p className="text-xs text-green-400 mb-1">v3 - speed test</p>
+          <p className="text-xs text-green-400 mb-1">v4 - walking elves</p>
           <p className="text-green-300 italic mb-6">"Santa has magic delivery powers.<br/>You have the magic of logistics."</p>
           <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left text-green-100 text-sm">
             <p className="mb-3">Guide Santa's workshop through <strong className="text-yellow-300">15 decades</strong> of toy-making history!</p>
