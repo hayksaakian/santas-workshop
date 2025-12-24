@@ -25,8 +25,8 @@ Based on user study findings. Ordered by priority/impact.
 - [x] Add floating emoji animation when resource is generated
 - [x] Flash/pulse resource counter on increment
 
-### 5. Grid Improvements (Observation 7)
-- [ ] Reduce grid size or make it dynamic per era
+### 5. Grid Improvements (Observation 7) ✅
+- [x] Reduce grid size or make it dynamic per era
 - [ ] Different visual for unused slots
 
 ### 6. Onboarding (Observation 8)
