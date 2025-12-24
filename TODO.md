@@ -7,10 +7,10 @@ Based on user study findings. Ordered by priority/impact.
 
 ## To Do
 
-### 1. Elf Visibility (Observations 1, 2)
-- [ ] Add working animation to elves at stations (bobbing/hammering)
-- [ ] Show unassigned elves as distinct characters above grid
-- [ ] Animate elves walking to stations when assigned
+### 1. Elf Visibility (Observations 1, 2) ✅
+- [x] Add working animation to elves at stations (bobbing/hammering)
+- [x] Show unassigned elves as distinct characters above grid
+- [x] Animate elves walking to stations when assigned
 
 ### 2. Elf Reassignment (Observations 3, 4)
 - [ ] Highlight other stations when one with elf is selected
