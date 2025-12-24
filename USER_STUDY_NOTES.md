@@ -62,3 +62,13 @@
 - Group resource stations separately from workshop benches
 - Add labels or tooltips explaining each station type
 - Maybe a dedicated "crafting area" vs "resource area" on the grid
+
+### Observation 7: Resource generation not visible
+- It's not obvious that filling the progress bar on a station generates a resource
+- No visual feedback when a resource is collected
+
+**Potential fixes:**
+- Pop-in emoji animation when resource is generated (e.g., 🪵 floats up and fades)
+- Flash or pulse on the resource counter when it increments
+- Sound effect on resource collection
+- Particle effect or sparkle at the station when complete
