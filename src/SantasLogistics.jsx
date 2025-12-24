@@ -56,9 +56,12 @@ export default function SantasLogistics() {
   const [sadChildrenNames, setSadChildrenNames] = useState([]);
   const [walkingElves, setWalkingElves] = useState([]); // elves currently animating
   const [recentArrivals, setRecentArrivals] = useState(new Set()); // cells with newly arrived elves
+  const [floatingResources, setFloatingResources] = useState([]); // floating emoji animations
+  const [recentResources, setRecentResources] = useState(new Set()); // resources that were just generated (for pulse)
 
   // Refs for tracking completions during tick (avoids nested setState issues)
   const pendingCompletions = useRef({ count: 0, score: 0, toys: [] });
+  const pendingResources = useRef([]); // Track resources generated this tick for floating animation
   const ordersRef = useRef([]);
   const prevSadChildren = useRef(0);
   const gridRef = useRef(null);
@@ -157,6 +160,7 @@ export default function SantasLogistics() {
             newProgress[key] += elfCount * 0.5;
             if (newProgress[key] >= station.time) {
               setResources(prev => ({ ...prev, [station.produces]: (prev[station.produces] || 0) + 1 }));
+              pendingResources.current.push({ resourceKey: station.produces, cellKey: key });
               newProgress[key] = 0;
             }
           });
@@ -255,8 +259,10 @@ export default function SantasLogistics() {
         const completedCount = pendingCompletions.current.count;
         const completedScore = pendingCompletions.current.score;
         const completedToys = pendingCompletions.current.toys;
+        const generatedResources = pendingResources.current;
         // Reset after reading
         pendingCompletions.current = { count: 0, score: 0, toys: [] };
+        pendingResources.current = [];
 
         if (completedCount > 0) {
           setOrdersCompleted(c => c + completedCount);
@@ -274,6 +280,26 @@ export default function SantasLogistics() {
         if (expiredThisTick > 0) {
           setSadChildren(c => c + expiredThisTick);
           setSadChildrenNames(prev => [...prev, ...expiredChildNames]);
+        }
+        // Spawn floating resource emojis
+        if (generatedResources.length > 0) {
+          const newFloaters = generatedResources.map(({ resourceKey, cellKey }) => ({
+            id: Date.now() + Math.random(),
+            resourceKey,
+            cellKey,
+          }));
+          setFloatingResources(prev => [...prev, ...newFloaters]);
+          // Track which resources were generated for pulse animation
+          const resourceKeys = new Set(generatedResources.map(r => r.resourceKey));
+          setRecentResources(resourceKeys);
+          // Clear floating resources after animation
+          setTimeout(() => {
+            setFloatingResources(prev => prev.filter(f => !newFloaters.some(n => n.id === f.id)));
+          }, 1000);
+          // Clear pulse after animation
+          setTimeout(() => {
+            setRecentResources(new Set());
+          }, 500);
         }
       }, 0);
     }, TICK_RATE);
@@ -505,7 +531,7 @@ export default function SantasLogistics() {
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">🎅 Santa's Workshop Simulator 🎄</h1>
-          <p className="text-xs text-green-400 mb-1">v6 - force reflow</p>
+          <p className="text-xs text-green-400 mb-1">v7 - resource feedback</p>
           <p className="text-green-300 italic mb-6">"Santa has magic delivery powers.<br/>You have the magic of logistics."</p>
           <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left text-green-100 text-sm">
             <p className="mb-3">Guide Santa's workshop through <strong className="text-yellow-300">15 decades</strong> of toy-making history!</p>
@@ -734,6 +760,10 @@ export default function SantasLogistics() {
           0% { opacity: 1; transform: translateY(0) scale(1); }
           100% { opacity: 0; transform: translateY(-60px) scale(1.5); }
         }
+        @keyframes resourcePulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.3); }
+        }
         @keyframes orderExpire {
           0% { transform: scale(1) rotate(0deg); opacity: 1; }
           20% { transform: scale(1.1) rotate(-5deg); }
@@ -768,7 +798,8 @@ export default function SantasLogistics() {
         <div className="bg-green-800 px-2 py-0.5 rounded text-white text-xs">🧝 {elves}</div>
         <span className="text-amber-600">|</span>
         {currentEra.resources.map(key => (
-          <div key={key} className="flex items-center gap-1 text-white text-xs">
+          <div key={key} className="flex items-center gap-1 text-white text-xs"
+            style={recentResources.has(key) ? { animation: 'resourcePulse 0.3s ease-out' } : {}}>
             {RESOURCES[key]?.icon}<span className="font-bold">{resources[key] || 0}</span>
           </div>
         ))}
@@ -920,6 +951,30 @@ export default function SantasLogistics() {
                   </span>
                 </div>
               ))}
+              {/* Floating Resource Emojis */}
+              {floatingResources.map(floater => {
+                const cell = cellRefs.current[floater.cellKey];
+                const gridEl = gridRef.current;
+                if (!cell || !gridEl) return null;
+                const cellRect = cell.getBoundingClientRect();
+                const gridRect = gridEl.getBoundingClientRect();
+                const left = cellRect.left - gridRect.left + cellRect.width / 2;
+                const top = cellRect.top - gridRect.top + cellRect.height / 2;
+                return (
+                  <div
+                    key={floater.id}
+                    className="absolute pointer-events-none z-30 text-lg"
+                    style={{
+                      left: `${left}px`,
+                      top: `${top}px`,
+                      transform: 'translate(-50%, -50%)',
+                      animation: 'floatUp 1s ease-out forwards',
+                    }}
+                  >
+                    {RESOURCES[floater.resourceKey]?.icon}
+                  </div>
+                );
+              })}
               {grid.map((row, y) =>
                 row.map((cell, x) => {
                   const key = `${x}-${y}`;
