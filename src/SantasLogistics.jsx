@@ -374,7 +374,7 @@ export default function SantasLogistics() {
   };
 
   // Spawn a walking elf animation using actual DOM positions
-  const spawnWalkingElf = (toX, toY, fromStation = null) => {
+  const spawnWalkingElf = (toX, toY, fromStation = null, capturedIdlePos = null) => {
     const id = Date.now() + Math.random();
     const destKey = `${toX}-${toY}`;
 
@@ -382,7 +382,6 @@ export default function SantasLogistics() {
     const gridEl = gridRef.current;
     const destCell = cellRefs.current[destKey];
     const sourceCell = fromStation ? cellRefs.current[`${fromStation.x}-${fromStation.y}`] : null;
-    const idleArea = idleAreaRef.current;
 
     if (!gridEl || !destCell) {
       // Fallback: just skip animation if we can't get positions
@@ -402,11 +401,10 @@ export default function SantasLogistics() {
       const sourceRect = sourceCell.getBoundingClientRect();
       fromLeft = sourceRect.right - gridRect.left - 8;
       fromTop = sourceRect.top - gridRect.top + 2;
-    } else if (idleArea) {
-      // Coming from idle area - start from center of idle area
-      const idleRect = idleArea.getBoundingClientRect();
-      fromLeft = (idleRect.left + idleRect.width / 2) - gridRect.left;
-      fromTop = idleRect.bottom - gridRect.top;
+    } else if (capturedIdlePos) {
+      // Use pre-captured idle position (before idle area was potentially removed)
+      fromLeft = capturedIdlePos.left - gridRect.left;
+      fromTop = capturedIdlePos.bottom - gridRect.top;
     } else {
       // Fallback: center top of grid
       fromLeft = gridRect.width / 2;
@@ -429,6 +427,14 @@ export default function SantasLogistics() {
     const key = `${x}-${y}`;
     const newGrid = grid.map(row => [...row]);
     newGrid[y][x] = stationType;
+
+    // Capture idle area position BEFORE updating state (it might disappear if this is the last elf)
+    let idlePos = null;
+    if (elves > 0 && idleAreaRef.current) {
+      const rect = idleAreaRef.current.getBoundingClientRect();
+      idlePos = { left: rect.left + rect.width / 2, bottom: rect.bottom };
+    }
+
     setGrid(newGrid);
     setStationModal(null);
     if (elves > 0) {
@@ -436,7 +442,7 @@ export default function SantasLogistics() {
       // Wait for the cell to be rendered before spawning walking elf
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          spawnWalkingElf(x, y); // Animate elf walking from idle area
+          spawnWalkingElf(x, y, null, idlePos); // Animate elf walking from idle area
         });
       });
       // Delay showing the stationed elf until animation completes (matches 0.6s transition)
@@ -499,7 +505,7 @@ export default function SantasLogistics() {
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">🎅 Santa's Workshop Simulator 🎄</h1>
-          <p className="text-xs text-green-400 mb-1">v4 - walking elves</p>
+          <p className="text-xs text-green-400 mb-1">v5 - idle walk fix</p>
           <p className="text-green-300 italic mb-6">"Santa has magic delivery powers.<br/>You have the magic of logistics."</p>
           <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left text-green-100 text-sm">
             <p className="mb-3">Guide Santa's workshop through <strong className="text-yellow-300">15 decades</strong> of toy-making history!</p>
