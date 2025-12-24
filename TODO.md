@@ -21,9 +21,9 @@ Based on user study findings. Ordered by priority/impact.
 - [ ] Visually distinguish workshop from resource stations
 - [ ] Show what each station produces (output indicator)
 
-### 4. Resource Feedback (Observation 6)
-- [ ] Add floating emoji animation when resource is generated
-- [ ] Flash/pulse resource counter on increment
+### 4. Resource Feedback (Observation 6) ✅
+- [x] Add floating emoji animation when resource is generated
+- [x] Flash/pulse resource counter on increment
 
 ### 5. Grid Improvements (Observation 7)
 - [ ] Reduce grid size or make it dynamic per era
