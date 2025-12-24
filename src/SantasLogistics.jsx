@@ -54,11 +54,13 @@ export default function SantasLogistics() {
   const [selectedTile, setSelectedTile] = useState(null);
   const [sadChildFlash, setSadChildFlash] = useState(0); // 0 = no flash, 1+ = intensity
   const [sadChildrenNames, setSadChildrenNames] = useState([]);
+  const [walkingElves, setWalkingElves] = useState([]); // [{id, toX, toY, startTime}]
 
   // Refs for tracking completions during tick (avoids nested setState issues)
   const pendingCompletions = useRef({ count: 0, score: 0, toys: [] });
   const ordersRef = useRef([]);
   const prevSadChildren = useRef(0);
+  const gridRef = useRef(null);
 
   // Memoize snowflake positions so they don't reset on every render
   const snowflakes = useMemo(() =>
@@ -336,6 +338,7 @@ export default function SantasLogistics() {
       if (cell && selectedElfCount > 0) {
         const targetElfCount = assignedElves[key] || 0;
         if (targetElfCount === 0) {
+          spawnWalkingElf(x, y, { x: selectedTile.x, y: selectedTile.y }); // Animate elf walking
           setAssignedElves(prev => ({ ...prev, [selectedKey]: selectedElfCount - 1, [key]: 1 }));
         }
         setSelectedTile(null);
@@ -356,6 +359,17 @@ export default function SantasLogistics() {
     }
   };
 
+  // Spawn a walking elf animation
+  const spawnWalkingElf = (toX, toY, fromStation = null) => {
+    const id = Date.now() + Math.random();
+    const elf = { id, toX, toY, fromStation };
+    setWalkingElves(prev => [...prev, elf]);
+    // Remove after animation completes
+    setTimeout(() => {
+      setWalkingElves(prev => prev.filter(e => e.id !== id));
+    }, 600);
+  };
+
   const placeStation = (stationType) => {
     if (!stationModal) return;
     const { x, y } = stationModal;
@@ -365,6 +379,7 @@ export default function SantasLogistics() {
     setStationModal(null);
     if (elves > 0) {
       const key = `${x}-${y}`;
+      spawnWalkingElf(x, y); // Animate elf walking from idle area
       setElves(e => e - 1);
       setAssignedElves(prev => ({ ...prev, [key]: 1 }));
     }
@@ -612,6 +627,13 @@ export default function SantasLogistics() {
           25% { transform: translateY(-2px) rotate(-5deg); }
           75% { transform: translateY(-2px) rotate(5deg); }
         }
+        @keyframes elfWalk {
+          0% { transform: translateY(0); }
+          25% { transform: translateY(-4px) rotate(-10deg); }
+          50% { transform: translateY(0); }
+          75% { transform: translateY(-4px) rotate(10deg); }
+          100% { transform: translateY(0); }
+        }
         @keyframes sadPulse {
           0%, 100% { transform: scale(1); }
           25% { transform: scale(1.3); background-color: #dc2626; }
@@ -786,7 +808,39 @@ export default function SantasLogistics() {
                 ))}
               </div>
             )}
-            <div className="grid gap-1 w-full aspect-square" style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}>
+            <div ref={gridRef} className="grid gap-1 w-full aspect-square relative" style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}>
+              {/* Walking Elves Overlay */}
+              {walkingElves.map(elf => {
+                const cellSize = 100 / GRID_SIZE;
+                const toLeft = elf.toX * cellSize + cellSize / 2;
+                const toTop = elf.toY * cellSize + cellSize / 2;
+                const fromLeft = elf.fromStation ? elf.fromStation.x * cellSize + cellSize / 2 : toLeft;
+                const fromTop = elf.fromStation ? elf.fromStation.y * cellSize + cellSize / 2 : -15;
+                return (
+                  <div
+                    key={elf.id}
+                    className="absolute text-lg pointer-events-none z-20"
+                    style={{
+                      left: `${fromLeft}%`,
+                      top: `${fromTop}%`,
+                      transform: 'translate(-50%, -50%)',
+                      animation: `elfWalk 0.15s ease-in-out infinite`,
+                      transition: 'left 0.5s ease-out, top 0.5s ease-out',
+                    }}
+                    ref={(el) => {
+                      if (el) {
+                        // Trigger animation after mount
+                        requestAnimationFrame(() => {
+                          el.style.left = `${toLeft}%`;
+                          el.style.top = `${toTop}%`;
+                        });
+                      }
+                    }}
+                  >
+                    🧝
+                  </div>
+                );
+              })}
               {grid.map((row, y) =>
                 row.map((cell, x) => {
                   const key = `${x}-${y}`;
