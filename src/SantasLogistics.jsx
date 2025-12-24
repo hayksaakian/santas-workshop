@@ -52,7 +52,7 @@ export default function SantasLogistics() {
   const [helpModal, setHelpModal] = useState(false);
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
-  const [sadChildFlash, setSadChildFlash] = useState(false);
+  const [sadChildFlash, setSadChildFlash] = useState(0); // 0 = no flash, 1+ = intensity
   const [sadChildrenNames, setSadChildrenNames] = useState([]);
 
   // Refs for tracking completions during tick (avoids nested setState issues)
@@ -287,11 +287,12 @@ export default function SantasLogistics() {
     }
   }, [sadChildren, gamePhase]);
 
-  // Flash animation when a child becomes sad
+  // Flash animation when a child becomes sad - intensity based on number of failures
   useEffect(() => {
     if (sadChildren > prevSadChildren.current && gamePhase === 'playing') {
-      setSadChildFlash(true);
-      const timer = setTimeout(() => setSadChildFlash(false), 1500);
+      const intensity = sadChildren - prevSadChildren.current;
+      setSadChildFlash(intensity);
+      const timer = setTimeout(() => setSadChildFlash(0), 1500 + intensity * 300);
       return () => clearTimeout(timer);
     }
     prevSadChildren.current = sadChildren;
@@ -608,6 +609,18 @@ export default function SantasLogistics() {
           50% { transform: scale(1.1); }
           75% { transform: scale(1.2); background-color: #dc2626; }
         }
+        @keyframes sadPulseIntense {
+          0%, 100% { transform: scale(1) rotate(0deg); }
+          10% { transform: scale(1.5) rotate(-3deg); background-color: #dc2626; }
+          20% { transform: scale(1.3) rotate(3deg); }
+          30% { transform: scale(1.6) rotate(-2deg); background-color: #b91c1c; }
+          40% { transform: scale(1.2) rotate(2deg); }
+          50% { transform: scale(1.5) rotate(-3deg); background-color: #dc2626; }
+          60% { transform: scale(1.3) rotate(3deg); }
+          70% { transform: scale(1.4) rotate(-2deg); background-color: #b91c1c; }
+          80% { transform: scale(1.2) rotate(2deg); }
+          90% { transform: scale(1.3) rotate(-1deg); background-color: #dc2626; }
+        }
         @keyframes floatUp {
           0% { opacity: 1; transform: translateY(0) scale(1); }
           100% { opacity: 0; transform: translateY(-60px) scale(1.5); }
@@ -631,7 +644,11 @@ export default function SantasLogistics() {
           <div className="bg-green-800 px-2 py-1 rounded text-white">🧝 {elves}</div>
           <div
             className={`px-2 py-1 rounded text-white transition-all ${sadChildren >= 3 ? 'bg-red-600' : 'bg-gray-600'}`}
-            style={sadChildFlash ? { animation: 'sadPulse 0.5s ease-in-out 3' } : {}}
+            style={sadChildFlash ? {
+              animation: sadChildFlash >= 2
+                ? `sadPulseIntense ${0.3 + sadChildFlash * 0.2}s ease-in-out ${Math.min(sadChildFlash + 1, 5)}`
+                : 'sadPulse 0.5s ease-in-out 3'
+            } : {}}
           >
             😢 {sadChildren}/{MAX_SAD_CHILDREN}
           </div>
