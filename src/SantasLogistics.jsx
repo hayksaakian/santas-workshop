@@ -57,6 +57,7 @@ export default function SantasLogistics() {
   const [walkingElves, setWalkingElves] = useState([]); // elves currently animating
   const [recentArrivals, setRecentArrivals] = useState(new Set()); // cells with newly arrived elves
   const [floatingResources, setFloatingResources] = useState([]); // floating emoji animations
+  const [floatingToys, setFloatingToys] = useState([]); // floating toy emoji when crafted
   const [recentResources, setRecentResources] = useState(new Set()); // resources that were just generated (for pulse)
 
   // Refs for tracking completions during tick (avoids nested setState issues)
@@ -207,7 +208,7 @@ export default function SantasLogistics() {
                         // Track in ref instead of nested setState
                         pendingCompletions.current.count += 1;
                         pendingCompletions.current.score += points;
-                        pendingCompletions.current.toys.push({ toyKey: o.toyKey, quantity: o.quantity });
+                        pendingCompletions.current.toys.push({ toyKey: o.toyKey, quantity: o.quantity, cellKey: key, toyIcon: o.toy.icon });
                         return { ...o, completed: newCompleted, status: 'done' };
                       }
                       return { ...o, completed: newCompleted };
@@ -276,6 +277,16 @@ export default function SantasLogistics() {
             });
             return updated;
           });
+          // Spawn floating toy emojis
+          const toyFloaters = completedToys.map(({ cellKey, toyIcon }) => ({
+            id: Date.now() + Math.random(),
+            cellKey,
+            icon: toyIcon,
+          }));
+          setFloatingToys(prev => [...prev, ...toyFloaters]);
+          setTimeout(() => {
+            setFloatingToys(prev => prev.filter(f => !toyFloaters.some(t => t.id === f.id)));
+          }, 1000);
         }
         if (expiredThisTick > 0) {
           setSadChildren(c => c + expiredThisTick);
@@ -531,7 +542,7 @@ export default function SantasLogistics() {
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">🎅 Santa's Workshop Simulator 🎄</h1>
-          <p className="text-xs text-green-400 mb-1">v7 - resource feedback</p>
+          <p className="text-xs text-green-400 mb-1">v8 - toy feedback</p>
           <p className="text-green-300 italic mb-6">"Santa has magic delivery powers.<br/>You have the magic of logistics."</p>
           <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left text-green-100 text-sm">
             <p className="mb-3">Guide Santa's workshop through <strong className="text-yellow-300">15 decades</strong> of toy-making history!</p>
@@ -972,6 +983,30 @@ export default function SantasLogistics() {
                     }}
                   >
                     {RESOURCES[floater.resourceKey]?.icon}
+                  </div>
+                );
+              })}
+              {/* Floating Toy Emojis */}
+              {floatingToys.map(floater => {
+                const cell = cellRefs.current[floater.cellKey];
+                const gridEl = gridRef.current;
+                if (!cell || !gridEl) return null;
+                const cellRect = cell.getBoundingClientRect();
+                const gridRect = gridEl.getBoundingClientRect();
+                const left = cellRect.left - gridRect.left + cellRect.width / 2;
+                const top = cellRect.top - gridRect.top + cellRect.height / 2;
+                return (
+                  <div
+                    key={floater.id}
+                    className="absolute pointer-events-none z-30 text-xl"
+                    style={{
+                      left: `${left}px`,
+                      top: `${top}px`,
+                      transform: 'translate(-50%, -50%)',
+                      animation: 'floatUp 1s ease-out forwards',
+                    }}
+                  >
+                    {floater.icon}
                   </div>
                 );
               })}
