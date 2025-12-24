@@ -542,7 +542,7 @@ export default function SantasLogistics() {
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">🎅 Santa's Workshop Simulator 🎄</h1>
-          <p className="text-xs text-green-400 mb-1">v8 - toy feedback</p>
+          <p className="text-xs text-green-400 mb-1">v9 - station clarity</p>
           <p className="text-green-300 italic mb-6">"Santa has magic delivery powers.<br/>You have the magic of logistics."</p>
           <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left text-green-100 text-sm">
             <p className="mb-3">Guide Santa's workshop through <strong className="text-yellow-300">15 decades</strong> of toy-making history!</p>
@@ -1020,12 +1020,18 @@ export default function SantasLogistics() {
                   const isSelected = selectedTile && selectedTile.x === x && selectedTile.y === y;
                   return (
                     <div key={key} ref={(el) => { if (el) cellRefs.current[key] = el; }} onClick={() => handleCellClick(x, y)}
-                      className={`aspect-square rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all relative overflow-hidden
-                        ${cell ? `${station.color} ${isSelected ? 'border-white ring-2 ring-white' : 'border-amber-400 hover:border-yellow-300'}` : 'bg-amber-800/30 border-amber-700/50 hover:bg-amber-700/50 hover:border-amber-500'}`}>
+                      className={`aspect-square rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all relative overflow-hidden
+                        ${cell
+                          ? `${station.color} ${isSelected ? 'border-2 border-white ring-2 ring-white' : station.isWorkshop ? 'border-2 border-dashed border-yellow-300' : 'border-2 border-amber-400 hover:border-yellow-300'}`
+                          : 'bg-amber-800/30 border-2 border-amber-700/50 hover:bg-amber-700/50 hover:border-amber-500'}`}>
                       {cell ? (
                         <>
                           <span className="text-xl sm:text-2xl">{job ? currentEra.toys[job.toyKey]?.icon : station.icon}</span>
                           {elfCount > 0 && <span className="absolute top-0.5 right-0.5 text-xs sm:text-sm" style={{ animation: recentArrivals.has(key) ? 'elfAppear 0.2s ease-out forwards' : 'elfWork 0.5s ease-in-out infinite' }}>🧝</span>}
+                          {/* Output indicator for resource stations */}
+                          {!station.isWorkshop && station.produces && (
+                            <span className="absolute bottom-0.5 left-0.5 text-xs opacity-70">→{RESOURCES[station.produces]?.icon}</span>
+                          )}
                           {!station.isWorkshop && progress > 0 && (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
                               <div className="h-full bg-yellow-400" style={{ width: `${(progress / station.time) * 100}%`, transition: 'width 1s linear' }} />
