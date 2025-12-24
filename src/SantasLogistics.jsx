@@ -542,7 +542,7 @@ export default function SantasLogistics() {
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">🎅 Santa's Workshop Simulator 🎄</h1>
-          <p className="text-xs text-green-400 mb-1">v12 - sawhorse workbench</p>
+          <p className="text-xs text-green-400 mb-1">v13 - flat table with crossbar</p>
           <p className="text-green-300 italic mb-6">"Santa has magic delivery powers.<br/>You have the magic of logistics."</p>
           <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left text-green-100 text-sm">
             <p className="mb-3">Guide Santa's workshop through <strong className="text-yellow-300">15 decades</strong> of toy-making history!</p>
@@ -1032,16 +1032,20 @@ export default function SantasLogistics() {
                                   {currentEra.toys[job.toyKey]?.icon}
                                 </span>
                               ) : (
-                                <span className="text-xs text-yellow-900/50">🔨</span>
+                                <span className="text-sm text-yellow-900/60">🔨</span>
                               )}
-                              {/* Workbench - tabletop with angled legs */}
-                              <div className="relative w-4/5 mt-0.5">
-                                {/* Tabletop */}
-                                <div className="h-1.5 bg-amber-900 rounded-sm border border-amber-700" />
-                                {/* Legs */}
-                                <div className="flex justify-between px-0.5">
-                                  <div className="w-1.5 h-2 bg-amber-800 origin-top" style={{ transform: 'skewX(15deg)' }} />
-                                  <div className="w-1.5 h-2 bg-amber-800 origin-top" style={{ transform: 'skewX(-15deg)' }} />
+                              {/* Workbench - flat table with legs and crossbar */}
+                              <div className="relative w-5/6 mt-0.5">
+                                {/* Tabletop - thicker */}
+                                <div className="h-2 bg-amber-800 rounded-sm border border-amber-950 shadow-sm" />
+                                {/* Legs with crossbar */}
+                                <div className="flex justify-between items-start">
+                                  {/* Left leg */}
+                                  <div className="w-1.5 h-3 bg-amber-700 border-x border-amber-900" />
+                                  {/* Crossbar */}
+                                  <div className="absolute left-1/2 -translate-x-1/2 top-2.5 w-3/5 h-1 bg-amber-600 rounded-sm" />
+                                  {/* Right leg */}
+                                  <div className="w-1.5 h-3 bg-amber-700 border-x border-amber-900" />
                                 </div>
                               </div>
                             </div>
