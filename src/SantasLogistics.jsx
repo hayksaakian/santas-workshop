@@ -53,9 +53,7 @@ export default function SantasLogistics() {
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
   const [sadChildFlash, setSadChildFlash] = useState(false);
-  const [lastSadChild, setLastSadChild] = useState(null);
   const [sadChildrenNames, setSadChildrenNames] = useState([]);
-  const [expiringOrderIds, setExpiringOrderIds] = useState([]);
 
   // Refs for tracking completions during tick (avoids nested setState issues)
   const pendingCompletions = useRef({ count: 0, score: 0, toys: [] });
@@ -124,8 +122,6 @@ export default function SantasLogistics() {
     setOrdersCompleted(0);
     setSadChildren(0);
     setSadChildrenNames([]);
-    setExpiringOrderIds([]);
-    setLastSadChild(null);
     prevSadChildren.current = 0;
     setOrderCount(0);
     setEraScore(0);
@@ -141,12 +137,6 @@ export default function SantasLogistics() {
       const expiringOrders = ordersRef.current.filter(order => order.timeLeft <= 1 && order.status !== 'done');
       const expiredThisTick = expiringOrders.length;
       const expiredChildNames = expiringOrders.map(o => ({ name: o.childName, toy: o.toy.icon }));
-      const expiredIds = expiringOrders.map(o => o.id);
-
-      // Mark orders as expiring for animation
-      if (expiredIds.length > 0) {
-        setExpiringOrderIds(expiredIds);
-      }
 
       setStationProgress(prevProgress => {
         const newProgress = { ...prevProgress };
@@ -170,8 +160,17 @@ export default function SantasLogistics() {
       });
 
       setOrders(prevOrders => {
-        const updatedOrders = prevOrders.map(order => ({ ...order, timeLeft: order.timeLeft - 1 }));
-        let newOrders = updatedOrders.filter(order => order.timeLeft > 0);
+        // First, remove orders that were marked as expiring in the previous tick
+        const withoutExpired = prevOrders.filter(order => order.status !== 'expiring');
+        // Decrement time and mark newly expiring orders
+        const updatedOrders = withoutExpired.map(order => {
+          const newTimeLeft = order.timeLeft - 1;
+          if (newTimeLeft <= 0 && order.status !== 'done') {
+            return { ...order, timeLeft: 0, status: 'expiring' };
+          }
+          return { ...order, timeLeft: newTimeLeft };
+        });
+        let newOrders = updatedOrders;
         const claimedOrderIds = new Set();
 
         setWorkshopJobs(prevJobs => {
@@ -270,12 +269,6 @@ export default function SantasLogistics() {
         if (expiredThisTick > 0) {
           setSadChildren(c => c + expiredThisTick);
           setSadChildrenNames(prev => [...prev, ...expiredChildNames]);
-          // Set the last sad child for the toast
-          if (expiredChildNames.length > 0) {
-            setLastSadChild(expiredChildNames[expiredChildNames.length - 1]);
-          }
-          // Clear expiring IDs after a delay for animation
-          setTimeout(() => setExpiringOrderIds([]), 800);
         }
       }, 0);
     }, TICK_RATE);
@@ -629,15 +622,6 @@ export default function SantasLogistics() {
         }
       `}</style>
 
-      {/* Sad child toast notification */}
-      {sadChildFlash && lastSadChild && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-          <div className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-bold animate-bounce">
-            😢 {lastSadChild.name} didn't get their {lastSadChild.toy}!
-          </div>
-        </div>
-      )}
-
       <div className="flex-shrink-0 flex justify-between items-center px-3 py-2 bg-red-900/80 border-b-2 border-red-700 relative z-10">
         <div className="flex items-center gap-2">
           <h1 className="text-sm font-bold text-yellow-300">{currentEra.name}</h1>
@@ -696,11 +680,11 @@ export default function SantasLogistics() {
                 const isExpanded = expandedOrder === order.id;
                 const canAfford = canAffordRecipe(order.toy.recipe);
                 const isCrafting = Object.values(workshopJobs).some(job => job && job.orderId === order.id);
-                const isExpiring = expiringOrderIds.includes(order.id);
+                const isExpiring = order.status === 'expiring';
                 return (
-                  <div key={order.id} onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                    className={`flex-shrink-0 rounded-lg p-2 border text-xs cursor-pointer transition-all ${isCrafting ? 'bg-yellow-900/50 border-yellow-500' : canAfford ? 'bg-green-900/40 border-green-600' : 'bg-red-950/30 border-red-900/50 opacity-60'} ${isExpanded ? 'min-w-36' : 'min-w-20'}`}
-                    style={isExpiring ? { animation: 'orderExpire 0.8s ease-out forwards', backgroundColor: '#dc2626', borderColor: '#dc2626' } : {}}>
+                  <div key={order.id} onClick={() => !isExpiring && setExpandedOrder(isExpanded ? null : order.id)}
+                    className={`flex-shrink-0 rounded-lg p-2 border text-xs cursor-pointer transition-all ${isExpiring ? 'bg-red-600 border-red-400' : isCrafting ? 'bg-yellow-900/50 border-yellow-500' : canAfford ? 'bg-green-900/40 border-green-600' : 'bg-red-950/30 border-red-900/50 opacity-60'} ${isExpanded ? 'min-w-36' : 'min-w-20'}`}
+                    style={isExpiring ? { animation: 'orderExpire 0.8s ease-out forwards' } : {}}>
                     <div className="flex justify-between items-center gap-2">
                       <span className="text-white font-bold">{order.toy.icon} x{order.quantity}</span>
                       <span className={`font-mono text-xs ${order.timeLeft < 20 ? 'text-red-400' : 'text-green-400'}`}>{Math.round(order.timeLeft)}s</span>
