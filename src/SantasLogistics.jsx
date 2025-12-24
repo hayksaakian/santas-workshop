@@ -59,6 +59,7 @@ export default function SantasLogistics() {
   const [floatingResources, setFloatingResources] = useState([]); // floating emoji animations
   const [floatingToys, setFloatingToys] = useState([]); // floating toy emoji when crafted
   const [recentResources, setRecentResources] = useState(new Set()); // resources that were just generated (for pulse)
+  const [draggingElf, setDraggingElf] = useState(null); // { sourceKey, sourceX, sourceY } when dragging
 
   // Refs for tracking completions during tick (avoids nested setState issues)
   const pendingCompletions = useRef({ count: 0, score: 0, toys: [] });
@@ -68,6 +69,8 @@ export default function SantasLogistics() {
   const gridRef = useRef(null);
   const cellRefs = useRef({}); // Track cell DOM elements for accurate positioning
   const idleAreaRef = useRef(null); // Track idle elves area for walking animation start
+  const dragPositionRef = useRef({ x: 0, y: 0 }); // Track drag position without re-renders
+  const dragElfRef = useRef(null); // Ref to the dragging elf element for direct DOM updates
 
   // Memoize snowflake positions so they don't reset on every render
   const snowflakes = useMemo(() =>
@@ -419,6 +422,81 @@ export default function SantasLogistics() {
     }
   };
 
+  // Drag and drop handlers for elf reassignment
+  const handleDragStart = (x, y, e) => {
+    const key = `${x}-${y}`;
+    const elfCount = assignedElves[key] || 0;
+    if (elfCount === 0) return;
+
+    e.preventDefault(); // Prevent scrolling
+    const touch = e.touches[0];
+    dragPositionRef.current = { x: touch.clientX, y: touch.clientY };
+    setDraggingElf({ sourceKey: key, sourceX: x, sourceY: y });
+    setSelectedTile(null); // Clear any selection
+  };
+
+  const handleDragMove = (e) => {
+    if (!draggingElf) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    dragPositionRef.current = { x: touch.clientX, y: touch.clientY };
+    // Update elf position directly via ref for performance
+    if (dragElfRef.current) {
+      dragElfRef.current.style.left = `${touch.clientX}px`;
+      dragElfRef.current.style.top = `${touch.clientY}px`;
+    }
+  };
+
+  const handleDragEnd = (e) => {
+    if (!draggingElf) return;
+
+    // Find which cell we're over
+    const touch = e.changedTouches[0];
+    const dropX = touch.clientX;
+    const dropY = touch.clientY;
+
+    let targetKey = null;
+    let targetX = null;
+    let targetY = null;
+
+    // Check each cell to see if drop point is inside
+    for (const [key, cellEl] of Object.entries(cellRefs.current)) {
+      if (!cellEl) continue;
+      const rect = cellEl.getBoundingClientRect();
+      if (dropX >= rect.left && dropX <= rect.right && dropY >= rect.top && dropY <= rect.bottom) {
+        const [cx, cy] = key.split('-').map(Number);
+        // Only allow drop on cells with stations (not empty cells) and not the source
+        if (grid[cy]?.[cx] && key !== draggingElf.sourceKey) {
+          targetKey = key;
+          targetX = cx;
+          targetY = cy;
+        }
+        break;
+      }
+    }
+
+    if (targetKey) {
+      // Move elf from source to target
+      const sourceKey = draggingElf.sourceKey;
+      const sourceElfCount = assignedElves[sourceKey] || 0;
+
+      spawnWalkingElf(targetX, targetY, { x: draggingElf.sourceX, y: draggingElf.sourceY });
+      setAssignedElves(prev => ({ ...prev, [sourceKey]: sourceElfCount - 1 }));
+
+      setTimeout(() => {
+        setRecentArrivals(prev => new Set([...prev, targetKey]));
+        setAssignedElves(prev => ({ ...prev, [targetKey]: (prev[targetKey] || 0) + 1 }));
+        setTimeout(() => setRecentArrivals(prev => {
+          const next = new Set(prev);
+          next.delete(targetKey);
+          return next;
+        }), 300);
+      }, 600);
+    }
+
+    setDraggingElf(null);
+  };
+
   // Spawn a walking elf animation using actual DOM positions
   const spawnWalkingElf = (toX, toY, fromStation = null, capturedIdlePos = null) => {
     const id = Date.now() + Math.random();
@@ -551,7 +629,7 @@ export default function SantasLogistics() {
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">🎅 Santa's Workshop Simulator 🎄</h1>
-          <p className="text-xs text-green-400 mb-1">v17 - scaled icons</p>
+          <p className="text-xs text-green-400 mb-1">v18 - drag and drop elves</p>
           <p className="text-green-300 italic mb-6">"Santa has magic delivery powers.<br/>You have the magic of logistics."</p>
           <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left text-green-100 text-sm">
             <p className="mb-3">Guide Santa's workshop through <strong className="text-yellow-300">15 decades</strong> of toy-making history!</p>
@@ -1027,10 +1105,17 @@ export default function SantasLogistics() {
                   const station = cell ? STATIONS[cell] : null;
                   const job = workshopJobs[key];
                   const isSelected = selectedTile && selectedTile.x === x && selectedTile.y === y;
+                  const isDragSource = draggingElf?.sourceKey === key;
+                  const isValidDropTarget = draggingElf && cell && key !== draggingElf.sourceKey;
                   return (
-                    <div key={key} ref={(el) => { if (el) cellRefs.current[key] = el; }} onClick={() => handleCellClick(x, y)}
+                    <div key={key} ref={(el) => { if (el) cellRefs.current[key] = el; }}
+                      onClick={() => handleCellClick(x, y)}
+                      onTouchStart={(e) => elfCount > 0 && handleDragStart(x, y, e)}
+                      onTouchMove={handleDragMove}
+                      onTouchEnd={handleDragEnd}
                       className={`aspect-square rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all relative overflow-hidden
-                        ${cell ? `${station.color} ${isSelected ? 'border-white ring-2 ring-white' : 'border-amber-400 hover:border-yellow-300'}` : 'bg-amber-800/30 border-amber-700/50 hover:bg-amber-700/50 hover:border-amber-500'}`}>
+                        ${cell ? `${station.color} ${isSelected ? 'border-white ring-2 ring-white' : isValidDropTarget ? 'border-green-400 ring-2 ring-green-400' : 'border-amber-400 hover:border-yellow-300'}` : 'bg-amber-800/30 border-amber-700/50 hover:bg-amber-700/50 hover:border-amber-500'}
+                        ${isDragSource ? 'opacity-50' : ''}`}>
                       {cell ? (
                         <>
                           {station.isWorkshop ? (
@@ -1058,7 +1143,7 @@ export default function SantasLogistics() {
                             /* Resource station: show station icon */
                             <span className={iconSizes.station}>{station.icon}</span>
                           )}
-                          {elfCount > 0 && <span className={`absolute top-0.5 right-0.5 ${iconSizes.elf}`} style={{
+                          {elfCount > 0 && !(isDragSource && elfCount === 1) && <span className={`absolute top-0.5 right-0.5 ${iconSizes.elf}`} style={{
                             animation: recentArrivals.has(key)
                               ? 'elfAppear 0.2s ease-out forwards'
                               : (station.isWorkshop && !job)
@@ -1098,6 +1183,21 @@ export default function SantasLogistics() {
           </div>
         </div>
       </div>
+
+      {/* Dragging elf overlay */}
+      {draggingElf && (
+        <div
+          ref={dragElfRef}
+          className="fixed pointer-events-none z-50 text-3xl"
+          style={{
+            left: dragPositionRef.current.x,
+            top: dragPositionRef.current.y,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <span style={{ animation: 'elfWalk 0.2s ease-in-out infinite' }}>🧝</span>
+        </div>
+      )}
 
       {stationModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setStationModal(null)}>
