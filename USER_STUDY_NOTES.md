@@ -30,3 +30,13 @@
 - Add a working animation to elves at stations (bobbing, hammering motion, etc.)
 - Different animation states for idle vs working
 - Maybe show sweat drops, motion lines, or tool-swinging animation
+
+### Observation 4: Elf reassignment not discoverable
+- It's not obvious that elves can be reassigned to other stations
+- Users don't realize they can move elves around
+
+**Potential fixes:**
+- Tutorial hint showing drag/tap to reassign
+- Visual affordance when station is selected (show possible destinations)
+- "Move elf" button or drag handle on assigned elves
+- Highlight empty stations when an elf is selected
