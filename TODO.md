@@ -17,9 +17,9 @@ Based on user study findings. Ordered by priority/impact.
 - [ ] Implement drag-and-drop for mobile
 - [ ] Visual feedback during drag (elf follows finger)
 
-### 3. Station Clarity (Observation 5)
-- [ ] Visually distinguish workshop from resource stations
-- [ ] Show what each station produces (output indicator)
+### 3. Station Clarity (Observation 5) ✅
+- [x] Visually distinguish workshop from resource stations
+- [x] Show what each station produces (output indicator)
 
 ### 4. Resource Feedback (Observation 6) ✅
 - [x] Add floating emoji animation when resource is generated
