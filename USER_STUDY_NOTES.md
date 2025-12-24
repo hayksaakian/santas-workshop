@@ -11,3 +11,13 @@
 - Add onboarding/tutorial hints
 - Highlight the grid or show a pulsing "tap here" indicator
 - Add an initial prompt or tooltip
+
+### Observation 2: Elves not visually clear as characters
+- It's not obvious that elves are occupying the stations
+- The small elf icon in the corner of a station doesn't convey "a character is here"
+
+**Potential fixes:**
+- Show unassigned elves as distinct individuals standing above the grid
+- Animate elves literally walking to stations when assigned
+- Make it clear they are characters moving around, not teleporting
+- Consider walk animations between positions to reinforce the concept
