@@ -821,16 +821,16 @@ export default function SantasLogistics() {
               {/* Walking Elves Overlay */}
               {walkingElves.map(elf => {
                 const cellSize = 100 / GRID_SIZE;
-                // Target top-right corner of cell (where stationed elf appears)
-                const toLeft = elf.toX * cellSize + cellSize * 0.85;
-                const toTop = elf.toY * cellSize + cellSize * 0.15;
+                // Target top-right corner of cell (where stationed elf appears: top-0.5 right-0.5)
+                const toLeft = elf.toX * cellSize + cellSize * 0.92;
+                const toTop = elf.toY * cellSize + cellSize * 0.08;
                 // Start from source position (top-right of source cell, or above grid if from idle)
                 const fromLeft = elf.fromStation
-                  ? elf.fromStation.x * cellSize + cellSize * 0.85
+                  ? elf.fromStation.x * cellSize + cellSize * 0.92
                   : toLeft;
                 const fromTop = elf.fromStation
-                  ? elf.fromStation.y * cellSize + cellSize * 0.15
-                  : -10;
+                  ? elf.fromStation.y * cellSize + cellSize * 0.08
+                  : -8;
                 return (
                   <div
                     key={elf.id}
