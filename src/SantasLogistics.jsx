@@ -54,14 +54,15 @@ export default function SantasLogistics() {
   const [selectedTile, setSelectedTile] = useState(null);
   const [sadChildFlash, setSadChildFlash] = useState(0); // 0 = no flash, 1+ = intensity
   const [sadChildrenNames, setSadChildrenNames] = useState([]);
-  const [walkingElves, setWalkingElves] = useState([]); // [{id, toX, toY, startTime}]
-  const [recentArrivals, setRecentArrivals] = useState(new Set()); // cells with recently arrived elves
+  const [walkingElves, setWalkingElves] = useState([]); // elves currently animating
+  const [recentArrivals, setRecentArrivals] = useState(new Set()); // cells with newly arrived elves
 
   // Refs for tracking completions during tick (avoids nested setState issues)
   const pendingCompletions = useRef({ count: 0, score: 0, toys: [] });
   const ordersRef = useRef([]);
   const prevSadChildren = useRef(0);
   const gridRef = useRef(null);
+  const cellRefs = useRef({}); // Track cell DOM elements for accurate positioning
 
   // Memoize snowflake positions so they don't reset on every render
   const snowflakes = useMemo(() =>
@@ -371,12 +372,43 @@ export default function SantasLogistics() {
     }
   };
 
-  // Spawn a walking elf animation
+  // Spawn a walking elf animation using actual DOM positions
   const spawnWalkingElf = (toX, toY, fromStation = null) => {
     const id = Date.now() + Math.random();
     const destKey = `${toX}-${toY}`;
-    const elf = { id, toX, toY, fromStation, destKey };
+
+    // Get actual pixel positions from DOM
+    const gridEl = gridRef.current;
+    const destCell = cellRefs.current[destKey];
+    const sourceCell = fromStation ? cellRefs.current[`${fromStation.x}-${fromStation.y}`] : null;
+
+    if (!gridEl || !destCell) {
+      // Fallback: just skip animation if we can't get positions
+      return destKey;
+    }
+
+    const gridRect = gridEl.getBoundingClientRect();
+    const destRect = destCell.getBoundingClientRect();
+
+    // Calculate destination position (top-right corner of cell, relative to grid)
+    const destLeft = destRect.right - gridRect.left - 8; // 8px offset for elf size
+    const destTop = destRect.top - gridRect.top + 2;
+
+    // Calculate source position
+    let fromLeft, fromTop;
+    if (sourceCell) {
+      const sourceRect = sourceCell.getBoundingClientRect();
+      fromLeft = sourceRect.right - gridRect.left - 8;
+      fromTop = sourceRect.top - gridRect.top + 2;
+    } else {
+      // Coming from idle area above the grid
+      fromLeft = destLeft;
+      fromTop = -20;
+    }
+
+    const elf = { id, toX, toY, fromStation, destKey, fromLeft, fromTop, destLeft, destTop };
     setWalkingElves(prev => [...prev, elf]);
+
     // Remove after animation completes
     setTimeout(() => {
       setWalkingElves(prev => prev.filter(e => e.id !== id));
@@ -387,15 +419,20 @@ export default function SantasLogistics() {
   const placeStation = (stationType) => {
     if (!stationModal) return;
     const { x, y } = stationModal;
+    const key = `${x}-${y}`;
     const newGrid = grid.map(row => [...row]);
     newGrid[y][x] = stationType;
     setGrid(newGrid);
     setStationModal(null);
     if (elves > 0) {
-      const key = `${x}-${y}`;
-      spawnWalkingElf(x, y); // Animate elf walking from idle area
-      // Delay showing the stationed elf until animation completes
       setElves(e => e - 1);
+      // Wait for the cell to be rendered before spawning walking elf
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          spawnWalkingElf(x, y); // Animate elf walking from idle area
+        });
+      });
+      // Delay showing the stationed elf until animation completes
       setTimeout(() => {
         setRecentArrivals(prev => new Set([...prev, key]));
         setAssignedElves(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
@@ -838,54 +875,38 @@ export default function SantasLogistics() {
             )}
             <div ref={gridRef} className="grid gap-1 w-full aspect-square relative" style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}>
               {/* Walking Elves Overlay */}
-              {walkingElves.map(elf => {
-                const cellSize = 100 / GRID_SIZE;
-                // Target top-right corner of cell (where stationed elf appears: top-0.5 right-0.5)
-                const toLeft = elf.toX * cellSize + cellSize * 0.92;
-                const toTop = elf.toY * cellSize + cellSize * 0.08;
-                // Start from source position (top-right of source cell, or above grid if from idle)
-                const fromLeft = elf.fromStation
-                  ? elf.fromStation.x * cellSize + cellSize * 0.92
-                  : toLeft;
-                const fromTop = elf.fromStation
-                  ? elf.fromStation.y * cellSize + cellSize * 0.08
-                  : -8;
-                return (
-                  <div
-                    key={elf.id}
-                    className="absolute pointer-events-none z-20"
-                    style={{
-                      left: `${fromLeft}%`,
-                      top: `${fromTop}%`,
-                      transition: 'left 0.5s ease-out, top 0.5s ease-out, opacity 0.15s ease-out 0.4s',
-                      opacity: 1,
-                    }}
-                    ref={(el) => {
-                      if (el) {
-                        // Trigger animation after mount
-                        requestAnimationFrame(() => {
-                          el.style.left = `${toLeft}%`;
-                          el.style.top = `${toTop}%`;
-                        });
-                        // Fade out near the end
-                        setTimeout(() => {
-                          el.style.opacity = '0';
-                        }, 400);
-                      }
-                    }}
+              {walkingElves.map(elf => (
+                <div
+                  key={elf.id}
+                  className="absolute pointer-events-none z-20"
+                  style={{
+                    left: `${elf.fromLeft}px`,
+                    top: `${elf.fromTop}px`,
+                    transition: 'left 0.5s ease-out, top 0.5s ease-out, opacity 0.15s ease-out 0.4s',
+                    opacity: 1,
+                  }}
+                  ref={(el) => {
+                    if (el) {
+                      // Trigger animation after mount
+                      requestAnimationFrame(() => {
+                        el.style.left = `${elf.destLeft}px`;
+                        el.style.top = `${elf.destTop}px`;
+                      });
+                      // Fade out near the end
+                      setTimeout(() => {
+                        el.style.opacity = '0';
+                      }, 400);
+                    }
+                  }}
+                >
+                  <span
+                    className="text-xs sm:text-sm block"
+                    style={{ animation: 'elfWalk 0.15s ease-in-out infinite' }}
                   >
-                    <span
-                      className="text-xs sm:text-sm block"
-                      style={{
-                        transform: 'translate(-50%, -50%)',
-                        animation: 'elfWalk 0.15s ease-in-out infinite',
-                      }}
-                    >
-                      🧝
-                    </span>
-                  </div>
-                );
-              })}
+                    🧝
+                  </span>
+                </div>
+              ))}
               {grid.map((row, y) =>
                 row.map((cell, x) => {
                   const key = `${x}-${y}`;
@@ -895,7 +916,7 @@ export default function SantasLogistics() {
                   const job = workshopJobs[key];
                   const isSelected = selectedTile && selectedTile.x === x && selectedTile.y === y;
                   return (
-                    <div key={key} onClick={() => handleCellClick(x, y)}
+                    <div key={key} ref={(el) => { if (el) cellRefs.current[key] = el; }} onClick={() => handleCellClick(x, y)}
                       className={`aspect-square rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all relative overflow-hidden
                         ${cell ? `${station.color} ${isSelected ? 'border-white ring-2 ring-white' : 'border-amber-400 hover:border-yellow-300'}` : 'bg-amber-800/30 border-amber-700/50 hover:bg-amber-700/50 hover:border-amber-500'}`}>
                       {cell ? (
