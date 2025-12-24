@@ -92,6 +92,15 @@ export default function SantasLogistics() {
   const currentEra = ERAS[currentEraIndex];
   const availableStations = currentEra ? getStationsForEra(currentEra) : {};
 
+  // Scale icon sizes based on grid size (smaller grid = bigger cells = bigger icons)
+  const iconSizes = useMemo(() => {
+    const gridSize = currentEra?.gridSize || 6;
+    if (gridSize <= 3) return { station: 'text-4xl', toy: 'text-3xl', elf: 'text-base', plus: 'text-2xl', hammer: 'text-lg' };
+    if (gridSize <= 4) return { station: 'text-3xl', toy: 'text-2xl', elf: 'text-sm', plus: 'text-xl', hammer: 'text-base' };
+    if (gridSize <= 5) return { station: 'text-2xl', toy: 'text-xl', elf: 'text-sm', plus: 'text-lg', hammer: 'text-sm' };
+    return { station: 'text-xl sm:text-2xl', toy: 'text-lg sm:text-xl', elf: 'text-xs sm:text-sm', plus: 'text-lg', hammer: 'text-sm' };
+  }, [currentEra?.gridSize]);
+
   const startEra = () => {
     const era = ERAS[currentEraIndex];
     const newAvailableStations = getStationsForEra(era);
@@ -542,7 +551,7 @@ export default function SantasLogistics() {
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">🎅 Santa's Workshop Simulator 🎄</h1>
-          <p className="text-xs text-green-400 mb-1">v16 - dynamic grid size</p>
+          <p className="text-xs text-green-400 mb-1">v17 - scaled icons</p>
           <p className="text-green-300 italic mb-6">"Santa has magic delivery powers.<br/>You have the magic of logistics."</p>
           <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left text-green-100 text-sm">
             <p className="mb-3">Guide Santa's workshop through <strong className="text-yellow-300">15 decades</strong> of toy-making history!</p>
@@ -1028,11 +1037,11 @@ export default function SantasLogistics() {
                             /* Workshop: show workbench with toy on top when crafting */
                             <div className="flex flex-col items-center justify-end w-full h-full pb-0.5">
                               {job ? (
-                                <span className="text-lg sm:text-xl" style={{ animation: 'elfWork 0.5s ease-in-out infinite' }}>
+                                <span className={iconSizes.toy} style={{ animation: 'elfWork 0.5s ease-in-out infinite' }}>
                                   {currentEra.toys[job.toyKey]?.icon}
                                 </span>
                               ) : (
-                                <span className="text-sm text-yellow-900/60">🔨</span>
+                                <span className={`${iconSizes.hammer} text-yellow-900/60`}>🔨</span>
                               )}
                               {/* Workbench - flat table with legs */}
                               <div className="w-5/6 mt-0.5">
@@ -1047,9 +1056,9 @@ export default function SantasLogistics() {
                             </div>
                           ) : (
                             /* Resource station: show station icon */
-                            <span className="text-xl sm:text-2xl">{station.icon}</span>
+                            <span className={iconSizes.station}>{station.icon}</span>
                           )}
-                          {elfCount > 0 && <span className="absolute top-0.5 right-0.5 text-xs sm:text-sm" style={{
+                          {elfCount > 0 && <span className={`absolute top-0.5 right-0.5 ${iconSizes.elf}`} style={{
                             animation: recentArrivals.has(key)
                               ? 'elfAppear 0.2s ease-out forwards'
                               : (station.isWorkshop && !job)
@@ -1068,7 +1077,7 @@ export default function SantasLogistics() {
                           )}
                         </>
                       ) : (
-                        <span className="text-amber-700/50 text-lg">+</span>
+                        <span className={`text-amber-700/50 ${iconSizes.plus}`}>+</span>
                       )}
                     </div>
                   );
