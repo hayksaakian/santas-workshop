@@ -339,7 +339,11 @@ export default function SantasLogistics() {
         const targetElfCount = assignedElves[key] || 0;
         if (targetElfCount === 0) {
           spawnWalkingElf(x, y, { x: selectedTile.x, y: selectedTile.y }); // Animate elf walking
-          setAssignedElves(prev => ({ ...prev, [selectedKey]: selectedElfCount - 1, [key]: 1 }));
+          // Remove from source immediately, add to destination after animation
+          setAssignedElves(prev => ({ ...prev, [selectedKey]: selectedElfCount - 1 }));
+          setTimeout(() => {
+            setAssignedElves(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+          }, 550);
         }
         setSelectedTile(null);
         return;
@@ -362,12 +366,14 @@ export default function SantasLogistics() {
   // Spawn a walking elf animation
   const spawnWalkingElf = (toX, toY, fromStation = null) => {
     const id = Date.now() + Math.random();
-    const elf = { id, toX, toY, fromStation };
+    const destKey = `${toX}-${toY}`;
+    const elf = { id, toX, toY, fromStation, destKey };
     setWalkingElves(prev => [...prev, elf]);
     // Remove after animation completes
     setTimeout(() => {
       setWalkingElves(prev => prev.filter(e => e.id !== id));
     }, 600);
+    return destKey;
   };
 
   const placeStation = (stationType) => {
@@ -380,8 +386,11 @@ export default function SantasLogistics() {
     if (elves > 0) {
       const key = `${x}-${y}`;
       spawnWalkingElf(x, y); // Animate elf walking from idle area
+      // Delay showing the stationed elf until animation completes
       setElves(e => e - 1);
-      setAssignedElves(prev => ({ ...prev, [key]: 1 }));
+      setTimeout(() => {
+        setAssignedElves(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+      }, 550);
     }
   };
 
