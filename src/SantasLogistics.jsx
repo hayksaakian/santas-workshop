@@ -641,7 +641,6 @@ export default function SantasLogistics() {
           <button onClick={() => setHelpModal(true)} className="w-5 h-5 rounded-full bg-amber-700 hover:bg-amber-600 text-white text-xs font-bold">?</button>
         </div>
         <div className="flex gap-2 items-center text-xs">
-          <div className="bg-green-800 px-2 py-1 rounded text-white">🧝 {elves}</div>
           <div
             className={`px-2 py-1 rounded text-white transition-all ${sadChildren >= 3 ? 'bg-red-600' : 'bg-gray-600'}`}
             style={sadChildFlash ? {
@@ -657,6 +656,8 @@ export default function SantasLogistics() {
       </div>
 
       <div className="flex-shrink-0 flex justify-center gap-2 px-2 py-1 bg-amber-900/60 border-b border-amber-700 relative z-10 flex-wrap">
+        <div className="bg-green-800 px-2 py-0.5 rounded text-white text-xs">🧝 {elves}</div>
+        <span className="text-amber-600">|</span>
         {currentEra.resources.map(key => (
           <div key={key} className="flex items-center gap-1 text-white text-xs">
             {RESOURCES[key]?.icon}<span className="font-bold">{resources[key] || 0}</span>
