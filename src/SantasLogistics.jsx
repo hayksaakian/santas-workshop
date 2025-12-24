@@ -542,7 +542,7 @@ export default function SantasLogistics() {
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">🎅 Santa's Workshop Simulator 🎄</h1>
-          <p className="text-xs text-green-400 mb-1">v15 - idle elf animation</p>
+          <p className="text-xs text-green-400 mb-1">v16 - dynamic grid size</p>
           <p className="text-green-300 italic mb-6">"Santa has magic delivery powers.<br/>You have the magic of logistics."</p>
           <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left text-green-100 text-sm">
             <p className="mb-3">Guide Santa's workshop through <strong className="text-yellow-300">15 decades</strong> of toy-making history!</p>
@@ -928,7 +928,7 @@ export default function SantasLogistics() {
                 ))}
               </div>
             )}
-            <div ref={gridRef} className="grid gap-1 w-full aspect-square relative" style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}>
+            <div ref={gridRef} className="grid gap-1 w-full aspect-square relative" style={{ gridTemplateColumns: `repeat(${currentEra.gridSize}, 1fr)` }}>
               {/* Walking Elves Overlay */}
               {walkingElves.map(elf => (
                 <div
@@ -1010,8 +1010,8 @@ export default function SantasLogistics() {
                   </div>
                 );
               })}
-              {grid.map((row, y) =>
-                row.map((cell, x) => {
+              {grid.slice(0, currentEra.gridSize).map((row, y) =>
+                row.slice(0, currentEra.gridSize).map((cell, x) => {
                   const key = `${x}-${y}`;
                   const progress = stationProgress[key] || 0;
                   const elfCount = assignedElves[key] || 0;
