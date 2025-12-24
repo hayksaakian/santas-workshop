@@ -838,7 +838,8 @@ export default function SantasLogistics() {
                     style={{
                       left: `${fromLeft}%`,
                       top: `${fromTop}%`,
-                      transition: 'left 0.5s ease-out, top 0.5s ease-out',
+                      transition: 'left 0.5s ease-out, top 0.5s ease-out, opacity 0.15s ease-out 0.4s',
+                      opacity: 1,
                     }}
                     ref={(el) => {
                       if (el) {
@@ -847,6 +848,10 @@ export default function SantasLogistics() {
                           el.style.left = `${toLeft}%`;
                           el.style.top = `${toTop}%`;
                         });
+                        // Fade out near the end
+                        setTimeout(() => {
+                          el.style.opacity = '0';
+                        }, 400);
                       }
                     }}
                   >
