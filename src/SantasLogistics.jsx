@@ -694,41 +694,70 @@ export default function SantasLogistics() {
             {orders.length === 0 ? (
               <p className="text-green-300 text-xs px-1 whitespace-nowrap">Waiting for orders...</p>
             ) : (
-              orders.map(order => {
-                const isExpanded = expandedOrder === order.id;
-                const canAfford = canAffordRecipe(order.toy.recipe);
-                const isCrafting = Object.values(workshopJobs).some(job => job && job.orderId === order.id);
-                const isExpiring = order.status === 'expiring';
-                return (
-                  <div key={order.id} onClick={() => !isExpiring && setExpandedOrder(isExpanded ? null : order.id)}
-                    className={`flex-shrink-0 rounded-lg p-2 border text-xs cursor-pointer transition-all ${isExpiring ? 'bg-red-600 border-red-400' : isCrafting ? 'bg-yellow-900/50 border-yellow-500' : canAfford ? 'bg-green-900/40 border-green-600' : 'bg-red-950/30 border-red-900/50 opacity-60'} ${isExpanded ? 'min-w-36' : 'min-w-20'}`}
-                    style={isExpiring ? { animation: 'orderExpire 0.8s ease-out forwards' } : {}}>
-                    <div className="flex justify-between items-center gap-2">
-                      <span className="text-white font-bold">{order.toy.icon} x{order.quantity}</span>
-                      <span className={`font-mono text-xs ${order.timeLeft < 20 ? 'text-red-400' : 'text-green-400'}`}>{Math.round(order.timeLeft)}s</span>
-                    </div>
-                    <div className="text-amber-300 text-xs truncate">For {order.childName}</div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-gray-400">{order.completed}/{order.quantity}</span>
-                      <span className={`px-1 rounded ${isCrafting ? 'bg-yellow-600 text-white' : canAfford ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-300'}`}>
-                        {isCrafting ? '🔨' : canAfford ? '✓' : '⏳'}
-                      </span>
-                    </div>
-                    {isExpanded && (
-                      <div className={`mt-2 pt-2 border-t ${isCrafting ? 'border-yellow-700/50' : 'border-red-700/50'}`}>
-                        <p className="text-gray-400 mb-1">Needs:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {Object.entries(order.toy.recipe).map(([r, n]) => {
-                            const have = resources[r] || 0;
-                            const enough = have >= n;
-                            return (<span key={r} className={`px-1.5 py-0.5 rounded ${enough ? 'bg-green-800 text-green-200' : 'bg-red-800 text-red-200'}`}>{RESOURCES[r]?.icon} {have}/{n}</span>);
-                          })}
-                        </div>
+              (() => {
+                // Calculate which orders can actually be afforded considering resource consumption order
+                const availableResources = { ...resources };
+                const affordableOrderIds = new Set();
+
+                for (const order of orders) {
+                  // Skip orders already being crafted
+                  const isCrafting = Object.values(workshopJobs).some(job => job && job.orderId === order.id);
+                  if (isCrafting || order.status === 'expiring') continue;
+
+                  // Check if we can afford this order with remaining resources
+                  let canAfford = true;
+                  for (const [res, amount] of Object.entries(order.toy.recipe)) {
+                    if ((availableResources[res] || 0) < amount) {
+                      canAfford = false;
+                      break;
+                    }
+                  }
+
+                  if (canAfford) {
+                    affordableOrderIds.add(order.id);
+                    // Deduct resources for this order
+                    for (const [res, amount] of Object.entries(order.toy.recipe)) {
+                      availableResources[res] = (availableResources[res] || 0) - amount;
+                    }
+                  }
+                }
+
+                return orders.map(order => {
+                  const isExpanded = expandedOrder === order.id;
+                  const isCrafting = Object.values(workshopJobs).some(job => job && job.orderId === order.id);
+                  const canAfford = affordableOrderIds.has(order.id);
+                  const isExpiring = order.status === 'expiring';
+                  return (
+                    <div key={order.id} onClick={() => !isExpiring && setExpandedOrder(isExpanded ? null : order.id)}
+                      className={`flex-shrink-0 rounded-lg p-2 border text-xs cursor-pointer transition-all ${isExpiring ? 'bg-red-600 border-red-400' : isCrafting ? 'bg-green-900/50 border-green-500' : canAfford ? 'bg-yellow-900/40 border-yellow-600' : 'bg-red-950/30 border-red-900/50 opacity-60'} ${isExpanded ? 'min-w-36' : 'min-w-20'}`}
+                      style={isExpiring ? { animation: 'orderExpire 0.8s ease-out forwards' } : {}}>
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="text-white font-bold">{order.toy.icon} x{order.quantity}</span>
+                        <span className={`font-mono text-xs ${order.timeLeft < 20 ? 'text-red-400' : 'text-green-400'}`}>{Math.round(order.timeLeft)}s</span>
                       </div>
-                    )}
-                  </div>
-                );
-              })
+                      <div className="text-amber-300 text-xs truncate">For {order.childName}</div>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-gray-400">{order.completed}/{order.quantity}</span>
+                        <span className={`px-1 rounded ${isCrafting ? 'bg-green-600 text-white' : canAfford ? 'bg-yellow-600 text-white' : 'bg-gray-600 text-gray-300'}`}>
+                          {isCrafting ? '🔨' : canAfford ? '✓' : '⏳'}
+                        </span>
+                      </div>
+                      {isExpanded && (
+                        <div className={`mt-2 pt-2 border-t ${isCrafting ? 'border-green-700/50' : 'border-red-700/50'}`}>
+                          <p className="text-gray-400 mb-1">Needs:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {Object.entries(order.toy.recipe).map(([r, n]) => {
+                              const have = resources[r] || 0;
+                              const enough = have >= n;
+                              return (<span key={r} className={`px-1.5 py-0.5 rounded ${enough ? 'bg-green-800 text-green-200' : 'bg-red-800 text-red-200'}`}>{RESOURCES[r]?.icon} {have}/{n}</span>);
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()
             )}
           </div>
         </div>
