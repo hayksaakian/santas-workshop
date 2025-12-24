@@ -646,8 +646,8 @@ export default function SantasLogistics() {
             className={`px-2 py-1 rounded text-white transition-all ${sadChildren >= 3 ? 'bg-red-600' : 'bg-gray-600'}`}
             style={sadChildFlash ? {
               animation: sadChildFlash >= 2
-                ? `sadPulseIntense ${0.3 + sadChildFlash * 0.2}s ease-in-out ${Math.min(sadChildFlash + 1, 5)}`
-                : 'sadPulse 0.5s ease-in-out 3'
+                ? `sadPulseIntense ${0.6 + sadChildFlash * 0.2}s ease-in-out ${Math.min(sadChildFlash + 2, 6)}`
+                : 'sadPulse 0.8s ease-in-out 4'
             } : {}}
           >
             😢 {sadChildren}/{MAX_SAD_CHILDREN}
