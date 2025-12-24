@@ -40,3 +40,13 @@
 - Visual affordance when station is selected (show possible destinations)
 - "Move elf" button or drag handle on assigned elves
 - Highlight empty stations when an elf is selected
+
+### Observation 5: Mobile users expect drag-and-drop
+- Users on mobile attempted to drag elves to move them
+- Current tap-to-select, tap-to-assign is not intuitive on touch devices
+
+**Potential fixes:**
+- Implement actual drag-and-drop for elves
+- Touch and hold to pick up elf, drag to destination
+- Visual feedback during drag (elf follows finger)
+- Drop zones highlight when dragging
