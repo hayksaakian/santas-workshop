@@ -722,13 +722,14 @@ export default function SantasLogistics() {
                   }
                 }
 
-                return orders.map(order => {
-                  const isExpanded = expandedOrder === order.id;
+                return orders.map((order, index) => {
+                  // Default to first order if none selected
+                  const isExpanded = expandedOrder === order.id || (expandedOrder === null && index === 0);
                   const isCrafting = Object.values(workshopJobs).some(job => job && job.orderId === order.id);
                   const canAfford = affordableOrderIds.has(order.id);
                   const isExpiring = order.status === 'expiring';
                   return (
-                    <div key={order.id} onClick={() => !isExpiring && setExpandedOrder(isExpanded ? null : order.id)}
+                    <div key={order.id} onClick={() => !isExpiring && setExpandedOrder(order.id)}
                       className={`flex-shrink-0 rounded-lg p-2 border text-xs cursor-pointer transition-all ${isExpiring ? 'bg-red-600 border-red-400' : isCrafting ? 'bg-green-900/50 border-green-500' : canAfford ? 'bg-yellow-900/40 border-yellow-600' : 'bg-red-950/30 border-red-900/50 opacity-60'} ${isExpanded ? 'min-w-36' : 'min-w-20'}`}
                       style={isExpiring ? { animation: 'orderExpire 0.8s ease-out forwards' } : {}}>
                       <div className="flex justify-between items-center gap-2">
@@ -738,9 +739,11 @@ export default function SantasLogistics() {
                       <div className="text-amber-300 text-xs truncate">For {order.childName}</div>
                       <div className="flex justify-between items-center mt-1">
                         <span className="text-gray-400">{order.completed}/{order.quantity}</span>
-                        <span className={`px-1 rounded ${isCrafting ? 'bg-green-600 text-white' : canAfford ? 'bg-yellow-600 text-white' : 'bg-gray-600 text-gray-300'}`}>
-                          {isCrafting ? '🔨' : canAfford ? '✓' : '⏳'}
-                        </span>
+                        {(isCrafting || !canAfford) && (
+                          <span className={`px-1 rounded ${isCrafting ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-300'}`}>
+                            {isCrafting ? '🔨' : '⏳'}
+                          </span>
+                        )}
                       </div>
                       {isExpanded && (
                         <div className={`mt-2 pt-2 border-t ${isCrafting ? 'border-green-700/50' : 'border-red-700/50'}`}>
