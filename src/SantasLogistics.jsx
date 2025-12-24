@@ -1053,8 +1053,8 @@ export default function SantasLogistics() {
                             animation: recentArrivals.has(key)
                               ? 'elfAppear 0.2s ease-out forwards'
                               : (station.isWorkshop && !job)
-                                ? 'elfIdle 2s ease-in-out infinite'
-                                : 'elfWork 0.5s ease-in-out infinite'
+                                ? 'elfIdle 3s ease-in-out infinite'
+                                : 'elfWork 0.375s ease-in-out infinite'
                           }}>🧝</span>}
                           {!station.isWorkshop && progress > 0 && (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
