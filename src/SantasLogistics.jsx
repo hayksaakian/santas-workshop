@@ -1026,7 +1026,7 @@ export default function SantasLogistics() {
                         <>
                           {station.isWorkshop ? (
                             /* Workshop: show workbench with toy on top when crafting */
-                            <div className="flex flex-col items-center justify-end h-full pb-0.5">
+                            <div className="flex flex-col items-center justify-end w-full h-full pb-0.5">
                               {job ? (
                                 <span className="text-lg sm:text-xl" style={{ animation: 'elfWork 0.5s ease-in-out infinite' }}>
                                   {currentEra.toys[job.toyKey]?.icon}
