@@ -542,7 +542,7 @@ export default function SantasLogistics() {
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">🎅 Santa's Workshop Simulator 🎄</h1>
-          <p className="text-xs text-green-400 mb-1">v14 - simplified table</p>
+          <p className="text-xs text-green-400 mb-1">v15 - idle elf animation</p>
           <p className="text-green-300 italic mb-6">"Santa has magic delivery powers.<br/>You have the magic of logistics."</p>
           <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left text-green-100 text-sm">
             <p className="mb-3">Guide Santa's workshop through <strong className="text-yellow-300">15 decades</strong> of toy-making history!</p>
@@ -1049,7 +1049,13 @@ export default function SantasLogistics() {
                             /* Resource station: show station icon */
                             <span className="text-xl sm:text-2xl">{station.icon}</span>
                           )}
-                          {elfCount > 0 && <span className="absolute top-0.5 right-0.5 text-xs sm:text-sm" style={{ animation: recentArrivals.has(key) ? 'elfAppear 0.2s ease-out forwards' : 'elfWork 0.5s ease-in-out infinite' }}>🧝</span>}
+                          {elfCount > 0 && <span className="absolute top-0.5 right-0.5 text-xs sm:text-sm" style={{
+                            animation: recentArrivals.has(key)
+                              ? 'elfAppear 0.2s ease-out forwards'
+                              : (station.isWorkshop && !job)
+                                ? 'elfIdle 2s ease-in-out infinite'
+                                : 'elfWork 0.5s ease-in-out infinite'
+                          }}>🧝</span>}
                           {!station.isWorkshop && progress > 0 && (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
                               <div className="h-full bg-yellow-400" style={{ width: `${(progress / station.time) * 100}%`, transition: 'width 1s linear' }} />
