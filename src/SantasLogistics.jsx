@@ -637,11 +637,11 @@ export default function SantasLogistics() {
           75% { transform: translateY(-2px) rotate(5deg); }
         }
         @keyframes elfWalk {
-          0% { transform: translateY(0); }
-          25% { transform: translateY(-4px) rotate(-10deg); }
-          50% { transform: translateY(0); }
-          75% { transform: translateY(-4px) rotate(10deg); }
-          100% { transform: translateY(0); }
+          0% { transform: translate(-50%, -50%) translateY(0); }
+          25% { transform: translate(-50%, -50%) translateY(-4px) rotate(-10deg); }
+          50% { transform: translate(-50%, -50%) translateY(0); }
+          75% { transform: translate(-50%, -50%) translateY(-4px) rotate(10deg); }
+          100% { transform: translate(-50%, -50%) translateY(0); }
         }
         @keyframes sadPulse {
           0%, 100% { transform: scale(1); }
@@ -834,12 +834,10 @@ export default function SantasLogistics() {
                 return (
                   <div
                     key={elf.id}
-                    className="absolute text-xs sm:text-sm pointer-events-none z-20"
+                    className="absolute pointer-events-none z-20"
                     style={{
                       left: `${fromLeft}%`,
                       top: `${fromTop}%`,
-                      transform: 'translate(-50%, -50%)',
-                      animation: `elfWalk 0.15s ease-in-out infinite`,
                       transition: 'left 0.5s ease-out, top 0.5s ease-out',
                     }}
                     ref={(el) => {
@@ -852,7 +850,15 @@ export default function SantasLogistics() {
                       }
                     }}
                   >
-                    🧝
+                    <span
+                      className="text-xs sm:text-sm block"
+                      style={{
+                        transform: 'translate(-50%, -50%)',
+                        animation: 'elfWalk 0.15s ease-in-out infinite',
+                      }}
+                    >
+                      🧝
+                    </span>
                   </div>
                 );
               })}
