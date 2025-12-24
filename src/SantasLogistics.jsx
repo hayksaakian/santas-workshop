@@ -542,7 +542,7 @@ export default function SantasLogistics() {
         </div>
         <div className="bg-red-800 border-4 border-yellow-500 rounded-xl p-8 text-center shadow-2xl max-w-lg relative z-10">
           <h1 className="text-4xl font-bold text-yellow-300 mb-2">🎅 Santa's Workshop Simulator 🎄</h1>
-          <p className="text-xs text-green-400 mb-1">v11 - workbench visual</p>
+          <p className="text-xs text-green-400 mb-1">v12 - sawhorse workbench</p>
           <p className="text-green-300 italic mb-6">"Santa has magic delivery powers.<br/>You have the magic of logistics."</p>
           <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left text-green-100 text-sm">
             <p className="mb-3">Guide Santa's workshop through <strong className="text-yellow-300">15 decades</strong> of toy-making history!</p>
@@ -1026,16 +1026,24 @@ export default function SantasLogistics() {
                         <>
                           {station.isWorkshop ? (
                             /* Workshop: show workbench with toy on top when crafting */
-                            <div className="flex flex-col items-center justify-end h-full pb-1">
+                            <div className="flex flex-col items-center justify-end h-full pb-0.5">
                               {job ? (
-                                <span className="text-xl sm:text-2xl mb-0.5" style={{ animation: 'elfWork 0.5s ease-in-out infinite' }}>
+                                <span className="text-lg sm:text-xl" style={{ animation: 'elfWork 0.5s ease-in-out infinite' }}>
                                   {currentEra.toys[job.toyKey]?.icon}
                                 </span>
                               ) : (
-                                <span className="text-xs text-yellow-900/40 mb-1">⚒️</span>
+                                <span className="text-xs text-yellow-900/50">🔨</span>
                               )}
-                              {/* Workbench surface */}
-                              <div className="w-4/5 h-1.5 bg-amber-800 rounded-sm border-t border-amber-600" />
+                              {/* Workbench - tabletop with angled legs */}
+                              <div className="relative w-4/5 mt-0.5">
+                                {/* Tabletop */}
+                                <div className="h-1.5 bg-amber-900 rounded-sm border border-amber-700" />
+                                {/* Legs */}
+                                <div className="flex justify-between px-0.5">
+                                  <div className="w-1.5 h-2 bg-amber-800 origin-top" style={{ transform: 'skewX(15deg)' }} />
+                                  <div className="w-1.5 h-2 bg-amber-800 origin-top" style={{ transform: 'skewX(-15deg)' }} />
+                                </div>
+                              </div>
                             </div>
                           ) : (
                             /* Resource station: show station icon */
