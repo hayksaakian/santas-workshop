@@ -55,6 +55,7 @@ export default function SantasLogistics() {
   const [sadChildFlash, setSadChildFlash] = useState(0); // 0 = no flash, 1+ = intensity
   const [sadChildrenNames, setSadChildrenNames] = useState([]);
   const [walkingElves, setWalkingElves] = useState([]); // [{id, toX, toY, startTime}]
+  const [recentArrivals, setRecentArrivals] = useState(new Set()); // cells with recently arrived elves
 
   // Refs for tracking completions during tick (avoids nested setState issues)
   const pendingCompletions = useRef({ count: 0, score: 0, toys: [] });
@@ -342,7 +343,14 @@ export default function SantasLogistics() {
           // Remove from source immediately, add to destination after animation
           setAssignedElves(prev => ({ ...prev, [selectedKey]: selectedElfCount - 1 }));
           setTimeout(() => {
+            setRecentArrivals(prev => new Set([...prev, key]));
             setAssignedElves(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+            // Clear arrival status after animation
+            setTimeout(() => setRecentArrivals(prev => {
+              const next = new Set(prev);
+              next.delete(key);
+              return next;
+            }), 300);
           }, 550);
         }
         setSelectedTile(null);
@@ -389,7 +397,14 @@ export default function SantasLogistics() {
       // Delay showing the stationed elf until animation completes
       setElves(e => e - 1);
       setTimeout(() => {
+        setRecentArrivals(prev => new Set([...prev, key]));
         setAssignedElves(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+        // Clear arrival status after animation
+        setTimeout(() => setRecentArrivals(prev => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        }), 300);
       }, 550);
     }
   };
@@ -630,6 +645,10 @@ export default function SantasLogistics() {
         @keyframes elfWork {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-3px); }
+        }
+        @keyframes elfAppear {
+          0% { opacity: 0; transform: scale(0.5); }
+          100% { opacity: 1; transform: scale(1); }
         }
         @keyframes elfIdle {
           0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -882,7 +901,7 @@ export default function SantasLogistics() {
                       {cell ? (
                         <>
                           <span className="text-xl sm:text-2xl">{job ? currentEra.toys[job.toyKey]?.icon : station.icon}</span>
-                          {elfCount > 0 && <span className="absolute top-0.5 right-0.5 text-xs sm:text-sm" style={{ animation: 'elfWork 0.5s ease-in-out infinite' }}>🧝</span>}
+                          {elfCount > 0 && <span className="absolute top-0.5 right-0.5 text-xs sm:text-sm" style={{ animation: recentArrivals.has(key) ? 'elfAppear 0.2s ease-out forwards' : 'elfWork 0.5s ease-in-out infinite' }}>🧝</span>}
                           {!station.isWorkshop && progress > 0 && (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
                               <div className="h-full bg-yellow-400" style={{ width: `${(progress / station.time) * 100}%`, transition: 'width 1s linear' }} />
