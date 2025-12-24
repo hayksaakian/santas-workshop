@@ -603,6 +603,15 @@ export default function SantasLogistics() {
       </div>
       <style>{`
         @keyframes fall { to { transform: translateY(100vh); } }
+        @keyframes elfWork {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+        }
+        @keyframes elfIdle {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          25% { transform: translateY(-2px) rotate(-5deg); }
+          75% { transform: translateY(-2px) rotate(5deg); }
+        }
         @keyframes sadPulse {
           0%, 100% { transform: scale(1); }
           25% { transform: scale(1.3); background-color: #dc2626; }
@@ -768,6 +777,15 @@ export default function SantasLogistics() {
         {/* Workshop Grid */}
         <div className="flex-1 flex items-center justify-center p-2 md:p-4 min-w-0">
           <div className="bg-amber-900/80 rounded-xl p-2 md:p-4 border-2 border-amber-700 w-full max-w-md relative">
+            {/* Unassigned Elves */}
+            {elves > 0 && (
+              <div className="flex justify-center gap-1 mb-2 pb-2 border-b border-amber-700/50">
+                <span className="text-amber-300 text-xs mr-1">Idle:</span>
+                {[...Array(elves)].map((_, i) => (
+                  <span key={i} className="text-sm" style={{ animation: 'elfIdle 2s ease-in-out infinite', animationDelay: `${i * 0.2}s` }}>🧝</span>
+                ))}
+              </div>
+            )}
             <div className="grid gap-1 w-full aspect-square" style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}>
               {grid.map((row, y) =>
                 row.map((cell, x) => {
@@ -784,7 +802,7 @@ export default function SantasLogistics() {
                       {cell ? (
                         <>
                           <span className="text-xl sm:text-2xl">{job ? currentEra.toys[job.toyKey]?.icon : station.icon}</span>
-                          {elfCount > 0 && <span className="absolute top-0.5 right-0.5 text-xs sm:text-sm">🧝</span>}
+                          {elfCount > 0 && <span className="absolute top-0.5 right-0.5 text-xs sm:text-sm" style={{ animation: 'elfWork 0.5s ease-in-out infinite' }}>🧝</span>}
                           {!station.isWorkshop && progress > 0 && (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
                               <div className="h-full bg-yellow-400" style={{ width: `${(progress / station.time) * 100}%`, transition: 'width 1s linear' }} />
