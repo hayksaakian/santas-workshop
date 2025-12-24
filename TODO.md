@@ -12,10 +12,10 @@ Based on user study findings. Ordered by priority/impact.
 - [x] Show unassigned elves as distinct characters above grid
 - [x] Animate elves walking to stations when assigned
 
-### 2. Elf Reassignment (Observations 3, 4)
-- [ ] Highlight other stations when one with elf is selected
-- [ ] Implement drag-and-drop for mobile
-- [ ] Visual feedback during drag (elf follows finger)
+### 2. Elf Reassignment (Observations 3, 4) ✅
+- [x] Highlight other stations when one with elf is selected
+- [x] Implement drag-and-drop for mobile
+- [x] Visual feedback during drag (elf follows finger)
 
 ### 3. Station Clarity (Observation 5) ✅
 - [x] Visually distinguish workshop from resource stations
