@@ -63,6 +63,7 @@ export default function SantasLogistics() {
   const prevSadChildren = useRef(0);
   const gridRef = useRef(null);
   const cellRefs = useRef({}); // Track cell DOM elements for accurate positioning
+  const idleAreaRef = useRef(null); // Track idle elves area for walking animation start
 
   // Memoize snowflake positions so they don't reset on every render
   const snowflakes = useMemo(() =>
@@ -346,13 +347,13 @@ export default function SantasLogistics() {
           setTimeout(() => {
             setRecentArrivals(prev => new Set([...prev, key]));
             setAssignedElves(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
-            // Clear arrival status after animation
+            // Clear arrival status after appear animation
             setTimeout(() => setRecentArrivals(prev => {
               const next = new Set(prev);
               next.delete(key);
               return next;
             }), 300);
-          }, 550);
+          }, 600);
         }
         setSelectedTile(null);
         return;
@@ -381,6 +382,7 @@ export default function SantasLogistics() {
     const gridEl = gridRef.current;
     const destCell = cellRefs.current[destKey];
     const sourceCell = fromStation ? cellRefs.current[`${fromStation.x}-${fromStation.y}`] : null;
+    const idleArea = idleAreaRef.current;
 
     if (!gridEl || !destCell) {
       // Fallback: just skip animation if we can't get positions
@@ -400,9 +402,14 @@ export default function SantasLogistics() {
       const sourceRect = sourceCell.getBoundingClientRect();
       fromLeft = sourceRect.right - gridRect.left - 8;
       fromTop = sourceRect.top - gridRect.top + 2;
+    } else if (idleArea) {
+      // Coming from idle area - start from center of idle area
+      const idleRect = idleArea.getBoundingClientRect();
+      fromLeft = (idleRect.left + idleRect.width / 2) - gridRect.left;
+      fromTop = idleRect.bottom - gridRect.top;
     } else {
-      // Coming from idle area above the grid
-      fromLeft = destLeft;
+      // Fallback: center top of grid
+      fromLeft = gridRect.width / 2;
       fromTop = -20;
     }
 
@@ -412,7 +419,7 @@ export default function SantasLogistics() {
     // Remove after animation completes
     setTimeout(() => {
       setWalkingElves(prev => prev.filter(e => e.id !== id));
-    }, 600);
+    }, 700);
     return destKey;
   };
 
@@ -432,17 +439,17 @@ export default function SantasLogistics() {
           spawnWalkingElf(x, y); // Animate elf walking from idle area
         });
       });
-      // Delay showing the stationed elf until animation completes
+      // Delay showing the stationed elf until animation completes (matches 0.6s transition)
       setTimeout(() => {
         setRecentArrivals(prev => new Set([...prev, key]));
         setAssignedElves(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
-        // Clear arrival status after animation
+        // Clear arrival status after appear animation
         setTimeout(() => setRecentArrivals(prev => {
           const next = new Set(prev);
           next.delete(key);
           return next;
         }), 300);
-      }, 550);
+      }, 600);
     }
   };
 
@@ -866,7 +873,7 @@ export default function SantasLogistics() {
           <div className="bg-amber-900/80 rounded-xl p-2 md:p-4 border-2 border-amber-700 w-full max-w-md relative">
             {/* Unassigned Elves */}
             {elves > 0 && (
-              <div className="flex justify-center gap-1 mb-2 pb-2 border-b border-amber-700/50">
+              <div ref={idleAreaRef} className="flex justify-center gap-1 mb-2 pb-2 border-b border-amber-700/50">
                 <span className="text-amber-300 text-xs mr-1">Idle:</span>
                 {[...Array(elves)].map((_, i) => (
                   <span key={i} className="text-sm" style={{ animation: 'elfIdle 2s ease-in-out infinite', animationDelay: `${i * 0.2}s` }}>🧝</span>
@@ -882,7 +889,7 @@ export default function SantasLogistics() {
                   style={{
                     left: `${elf.fromLeft}px`,
                     top: `${elf.fromTop}px`,
-                    transition: 'left 0.5s ease-out, top 0.5s ease-out, opacity 0.15s ease-out 0.4s',
+                    transition: 'left 0.6s cubic-bezier(0.4, 0, 0.2, 1), top 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.1s ease-out',
                     opacity: 1,
                   }}
                   ref={(el) => {
@@ -892,16 +899,16 @@ export default function SantasLogistics() {
                         el.style.left = `${elf.destLeft}px`;
                         el.style.top = `${elf.destTop}px`;
                       });
-                      // Fade out near the end
+                      // Fade out at the end
                       setTimeout(() => {
                         el.style.opacity = '0';
-                      }, 400);
+                      }, 550);
                     }
                   }}
                 >
                   <span
                     className="text-xs sm:text-sm block"
-                    style={{ animation: 'elfWalk 0.15s ease-in-out infinite' }}
+                    style={{ animation: 'elfWalk 0.25s ease-in-out infinite' }}
                   >
                     🧝
                   </span>
