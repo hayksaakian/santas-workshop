@@ -1015,7 +1015,7 @@ export default function SantasLogistics() {
                 ))}
               </div>
             )}
-            <div ref={gridRef} className="grid gap-1 w-full aspect-square relative" style={{ gridTemplateColumns: `repeat(${currentEra.gridSize}, 1fr)` }}>
+            <div ref={gridRef} className="grid gap-1 w-full aspect-square relative" style={{ gridTemplateColumns: `repeat(${currentEra.gridSize}, 1fr)`, touchAction: draggingElf ? 'none' : 'auto' }}>
               {/* Walking Elves Overlay */}
               {walkingElves.map(elf => (
                 <div
