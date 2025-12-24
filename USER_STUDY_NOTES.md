@@ -21,3 +21,12 @@
 - Animate elves literally walking to stations when assigned
 - Make it clear they are characters moving around, not teleporting
 - Consider walk animations between positions to reinforce the concept
+
+### Observation 3: Working elves look idle
+- When elves are working a station, it's not clear enough that they're actively doing something
+- The static elf icon doesn't convey "busy" vs "idle"
+
+**Potential fixes:**
+- Add a working animation to elves at stations (bobbing, hammering motion, etc.)
+- Different animation states for idle vs working
+- Maybe show sweat drops, motion lines, or tool-swinging animation
