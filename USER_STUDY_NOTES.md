@@ -2,17 +2,7 @@
 
 ## Session 1
 
-### Observation 1: Unclear how to start
-- It's not obvious what you're supposed to do to start
-- Most users just tap randomly on the screen after the start screen
-- They stumble upon tapping the grid to place stations by accident
-
-**Potential fixes:**
-- Add onboarding/tutorial hints
-- Highlight the grid or show a pulsing "tap here" indicator
-- Add an initial prompt or tooltip
-
-### Observation 2: Elves not visually clear as characters
+### Observation 1: Elves not visually clear as characters
 - It's not obvious that elves are occupying the stations
 - The small elf icon in the corner of a station doesn't convey "a character is here"
 
@@ -22,7 +12,7 @@
 - Make it clear they are characters moving around, not teleporting
 - Consider walk animations between positions to reinforce the concept
 
-### Observation 3: Working elves look idle
+### Observation 2: Working elves look idle
 - When elves are working a station, it's not clear enough that they're actively doing something
 - The static elf icon doesn't convey "busy" vs "idle"
 
@@ -31,7 +21,7 @@
 - Different animation states for idle vs working
 - Maybe show sweat drops, motion lines, or tool-swinging animation
 
-### Observation 4: Elf reassignment not discoverable
+### Observation 3: Elf reassignment not discoverable
 - It's not obvious that elves can be reassigned to other stations
 - Users don't realize they can move elves around
 
@@ -41,7 +31,7 @@
 - "Move elf" button or drag handle on assigned elves
 - Highlight empty stations when an elf is selected
 
-### Observation 5: Mobile users expect drag-and-drop
+### Observation 4: Mobile users expect drag-and-drop
 - Users on mobile attempted to drag elves to move them
 - Current tap-to-select, tap-to-assign is not intuitive on touch devices
 
@@ -51,7 +41,7 @@
 - Visual feedback during drag (elf follows finger)
 - Drop zones highlight when dragging
 
-### Observation 6: Station purposes unclear
+### Observation 5: Station purposes unclear
 - It's not obvious what stations do generally
 - The crafting workshop isn't clearly different from resource gathering stations
 - Users don't understand the resource → crafting flow
@@ -63,7 +53,7 @@
 - Add labels or tooltips explaining each station type
 - Maybe a dedicated "crafting area" vs "resource area" on the grid
 
-### Observation 7: Resource generation not visible
+### Observation 6: Resource generation not visible
 - It's not obvious that filling the progress bar on a station generates a resource
 - No visual feedback when a resource is collected
 
@@ -73,7 +63,7 @@
 - Sound effect on resource collection
 - Particle effect or sparkle at the station when complete
 
-### Observation 8: Grid size creates confusion
+### Observation 7: Grid size creates confusion
 - The large grid raises questions: "Am I supposed to fill up the whole grid?"
 - Unclear if filling the grid is a goal or even a good strategy
 - Grid size doesn't match the number of elves available
@@ -84,3 +74,13 @@
 - Dynamically sized grid based on era/difficulty
 - Show empty slots differently (maybe grayed out or with a "locked" state)
 - Explain grid strategy in tutorial
+
+### Observation 8: Unclear how to start (Onboarding)
+- It's not obvious what you're supposed to do to start
+- Most users just tap randomly on the screen after the start screen
+- They stumble upon tapping the grid to place stations by accident
+
+**Potential fixes:**
+- Add onboarding/tutorial hints
+- Highlight the grid or show a pulsing "tap here" indicator
+- Add an initial prompt or tooltip
