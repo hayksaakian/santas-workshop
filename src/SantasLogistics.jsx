@@ -542,8 +542,9 @@ export default function SantasLogistics() {
       const rect = cellEl.getBoundingClientRect();
       if (dropX >= rect.left && dropX <= rect.right && dropY >= rect.top && dropY <= rect.bottom) {
         const [cx, cy] = key.split('-').map(Number);
-        // Only allow drop on cells with stations (not empty cells) and not the source
-        if (grid[cy]?.[cx] && key !== draggingElf.sourceKey) {
+        // Only allow drop on cells with stations, no existing elf, and not the source
+        const targetElfCount = assignedElves[key] || 0;
+        if (grid[cy]?.[cx] && key !== draggingElf.sourceKey && targetElfCount === 0) {
           targetKey = key;
           targetX = cx;
           targetY = cy;
@@ -1210,7 +1211,7 @@ export default function SantasLogistics() {
                   const job = workshopJobs[key];
                   const isSelected = selectedTile && selectedTile.x === x && selectedTile.y === y;
                   const isDragSource = draggingElf?.sourceKey === key;
-                  const isValidDropTarget = draggingElf && cell && key !== draggingElf.sourceKey;
+                  const isValidDropTarget = draggingElf && cell && key !== draggingElf.sourceKey && elfCount === 0;
                   const isSynced = syncedCells.has(key);
                   return (
                     <div key={key} ref={(el) => { if (el) cellRefs.current[key] = el; }}
