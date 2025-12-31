@@ -44,6 +44,7 @@ export default function SantasLogistics() {
   const [sadChildren, setSadChildren] = useState(0);
   const [orderCount, setOrderCount] = useState(0);
   const [builtToys, setBuiltToys] = useState({});
+  const [toyInventory, setToyInventory] = useState({}); // Completed toys waiting to fulfill orders
 
   const [totalScore, setTotalScore] = useState(0);
   const [eraScore, setEraScore] = useState(0);
@@ -65,6 +66,7 @@ export default function SantasLogistics() {
   // Refs for tracking completions during tick (avoids nested setState issues)
   const pendingCompletions = useRef({ count: 0, score: 0, toys: [] });
   const pendingResources = useRef([]); // Track resources generated this tick for floating animation
+  const pendingToys = useRef([]); // Track toys crafted this tick for inventory
   const ordersRef = useRef([]);
   const prevSadChildren = useRef(0);
   const gridRef = useRef(null);
@@ -171,8 +173,10 @@ export default function SantasLogistics() {
     setOrders([]);
     ordersRef.current = [];
     pendingCompletions.current = { count: 0, score: 0, toys: [] };
+    pendingToys.current = [];
     setElves(unassignedElves);
     setBuiltToys({});
+    setToyInventory({});
     setAssignedElves(newAssignedElves);
     setStationProgress({});
     setWorkshopJobs({});
@@ -245,32 +249,9 @@ export default function SantasLogistics() {
       setWorkshopJobs(prevJobs => {
         const newJobs = { ...prevJobs };
         // Get current orders from ref (updated by setOrders above)
-        let currentOrders = ordersModRef.current || ordersRef.current;
-
-        // Find expired order IDs (orders that are expiring this tick)
-        const expiringOrderIds = new Set(
-          currentOrders.filter(o => o.status === 'expiring').map(o => o.id)
-        );
-
-        // Clean up jobs for expired orders and return resources
-        if (expiringOrderIds.size > 0) {
-          for (const [key, job] of Object.entries(newJobs)) {
-            if (job && expiringOrderIds.has(job.orderId)) {
-              // Find the toy recipe to return resources
-              const toy = currentEra.toys[job.toyKey];
-              if (toy) {
-                setResources(prev => {
-                  const updated = { ...prev };
-                  for (const [res, amount] of Object.entries(toy.recipe)) {
-                    updated[res] = (updated[res] || 0) + amount;
-                  }
-                  return updated;
-                });
-              }
-              delete newJobs[key];
-            }
-          }
-        }
+        const currentOrders = ordersModRef.current || ordersRef.current;
+        // Track which toy types are already being crafted this tick to avoid duplicates
+        const craftingToyTypes = new Set();
 
         grid.forEach((row, y) => {
           row.forEach((cell, x) => {
@@ -283,38 +264,33 @@ export default function SantasLogistics() {
 
             let job = newJobs[key];
             if (job) {
+              // Mark this toy type as being worked on
+              craftingToyTypes.add(job.toyKey);
+
               // Apply adjacency bonus: +50% per adjacent matching station with elves
               const adjacentCount = getAdjacentBonus(x, y, cell, grid, assignedElves);
               const speedMultiplier = 1 + (0.5 * adjacentCount);
               job = { ...job, progress: job.progress + elfCount * 0.5 * speedMultiplier };
               newJobs[key] = job;
+
               if (job.progress >= job.craftTime) {
-                currentOrders = currentOrders.map(o => {
-                  if (o.id === job.orderId) {
-                    const newCompleted = o.completed + 1;
-                    if (newCompleted >= o.quantity) {
-                      const bonus = Math.floor(o.timeLeft / 10) * 10;
-                      const points = o.toy.points * o.quantity + bonus;
-                      // Track in ref instead of nested setState
-                      pendingCompletions.current.count += 1;
-                      pendingCompletions.current.score += points;
-                      pendingCompletions.current.toys.push({ toyKey: o.toyKey, quantity: o.quantity, cellKey: key, toyIcon: o.toy.icon });
-                      return { ...o, completed: newCompleted, status: 'done' };
-                    }
-                    return { ...o, completed: newCompleted };
-                  }
-                  return o;
-                });
+                // Toy completed - add to pending inventory (not directly to order)
+                const toy = currentEra.toys[job.toyKey];
+                if (toy) {
+                  pendingToys.current.push({ toyKey: job.toyKey, cellKey: key, toyIcon: toy.icon });
+                }
                 delete newJobs[key];
                 job = null;
               }
             }
 
             if (!job) {
+              // Find a toy type that's needed by pending orders
               setResources(prevResources => {
-                const availableOrder = currentOrders.find(o => {
-                  if (o.status === 'done') return false;
-                  if (claimedOrderIds.has(o.id)) return false;
+                // Find an order that needs a toy we're not already crafting
+                const neededOrder = currentOrders.find(o => {
+                  if (o.status === 'done' || o.status === 'expiring') return false;
+                  if (craftingToyTypes.has(o.toyKey)) return false;
                   const recipe = o.toy.recipe;
                   for (const [res, amount] of Object.entries(recipe)) {
                     if ((prevResources[res] || 0) < amount) return false;
@@ -322,14 +298,15 @@ export default function SantasLogistics() {
                   return true;
                 });
 
-                if (availableOrder) {
-                  claimedOrderIds.add(availableOrder.id);
-                  const recipe = availableOrder.toy.recipe;
+                if (neededOrder) {
+                  craftingToyTypes.add(neededOrder.toyKey);
+                  const recipe = neededOrder.toy.recipe;
                   const updatedResources = { ...prevResources };
                   for (const [res, amount] of Object.entries(recipe)) {
                     updatedResources[res] -= amount;
                   }
-                  newJobs[key] = { orderId: availableOrder.id, toyKey: availableOrder.toyKey, progress: 0, craftTime: 5 };
+                  // Job only tracks toyKey, not orderId
+                  newJobs[key] = { toyKey: neededOrder.toyKey, progress: 0, craftTime: 5 };
                   return updatedResources;
                 }
                 return prevResources;
@@ -338,15 +315,54 @@ export default function SantasLogistics() {
           });
         });
 
-        // Store modified orders and update state
-        const finalOrders = currentOrders.filter(o => o.status !== 'done');
-        ordersRef.current = finalOrders;
-        jobsModRef.current = newJobs;
-
-        // Update orders state with final filtered list
-        setOrders(finalOrders);
-
         return newJobs;
+      });
+
+      // Fulfill orders from toy inventory
+      setToyInventory(prevInventory => {
+        const currentOrders = ordersModRef.current || ordersRef.current;
+        let inventory = { ...prevInventory };
+        let ordersChanged = false;
+
+        // Try to fulfill each pending order from inventory
+        const updatedOrders = currentOrders.map(order => {
+          if (order.status === 'done' || order.status === 'expiring') return order;
+
+          const available = inventory[order.toyKey] || 0;
+          const needed = order.quantity - order.completed;
+
+          if (available > 0 && needed > 0) {
+            const toFulfill = Math.min(available, needed);
+            inventory[order.toyKey] = available - toFulfill;
+            const newCompleted = order.completed + toFulfill;
+            ordersChanged = true;
+
+            if (newCompleted >= order.quantity) {
+              // Order fully completed
+              const bonus = Math.floor(order.timeLeft / 10) * 10;
+              const points = order.toy.points * order.quantity + bonus;
+              pendingCompletions.current.count += 1;
+              pendingCompletions.current.score += points;
+              pendingCompletions.current.toys.push({
+                toyKey: order.toyKey,
+                quantity: order.quantity,
+                cellKey: null,
+                toyIcon: order.toy.icon
+              });
+              return { ...order, completed: newCompleted, status: 'done' };
+            }
+            return { ...order, completed: newCompleted };
+          }
+          return order;
+        });
+
+        if (ordersChanged) {
+          const finalOrders = updatedOrders.filter(o => o.status !== 'done');
+          ordersRef.current = finalOrders;
+          setOrders(finalOrders);
+        }
+
+        return inventory;
       });
 
       // Flush pending completions after all state updates
@@ -356,24 +372,23 @@ export default function SantasLogistics() {
         const completedScore = pendingCompletions.current.score;
         const completedToys = pendingCompletions.current.toys;
         const generatedResources = pendingResources.current;
+        const craftedToys = pendingToys.current;
         // Reset after reading
         pendingCompletions.current = { count: 0, score: 0, toys: [] };
         pendingResources.current = [];
+        pendingToys.current = [];
 
-        if (completedCount > 0) {
-          setOrdersCompleted(c => c + completedCount);
-          setEraScore(s => s + completedScore);
-          setTotalScore(s => s + completedScore);
-          // Add built toys to collection
-          setBuiltToys(prev => {
+        // Add crafted toys to inventory
+        if (craftedToys.length > 0) {
+          setToyInventory(prev => {
             const updated = { ...prev };
-            completedToys.forEach(({ toyKey, quantity }) => {
-              updated[toyKey] = (updated[toyKey] || 0) + quantity;
+            craftedToys.forEach(({ toyKey }) => {
+              updated[toyKey] = (updated[toyKey] || 0) + 1;
             });
             return updated;
           });
-          // Spawn floating toy emojis
-          const toyFloaters = completedToys.map(({ cellKey, toyIcon }) => ({
+          // Spawn floating toy emojis for crafted toys
+          const toyFloaters = craftedToys.map(({ cellKey, toyIcon }) => ({
             id: Date.now() + Math.random(),
             cellKey,
             icon: toyIcon,
@@ -382,6 +397,20 @@ export default function SantasLogistics() {
           setTimeout(() => {
             setFloatingToys(prev => prev.filter(f => !toyFloaters.some(t => t.id === f.id)));
           }, 1000);
+        }
+
+        if (completedCount > 0) {
+          setOrdersCompleted(c => c + completedCount);
+          setEraScore(s => s + completedScore);
+          setTotalScore(s => s + completedScore);
+          // Add completed orders to built toys collection (for stats)
+          setBuiltToys(prev => {
+            const updated = { ...prev };
+            completedToys.forEach(({ toyKey, quantity }) => {
+              updated[toyKey] = (updated[toyKey] || 0) + quantity;
+            });
+            return updated;
+          });
         }
         if (expiredThisTick > 0) {
           setSadChildren(c => c + expiredThisTick);
@@ -1004,6 +1033,17 @@ export default function SantasLogistics() {
             {RESOURCES[key]?.icon}<span className="font-bold">{resources[key] || 0}</span>
           </div>
         ))}
+        {Object.keys(toyInventory).length > 0 && (
+          <>
+            <span className="text-amber-600">|</span>
+            <span className="text-xs text-blue-300">📦</span>
+            {Object.entries(toyInventory).filter(([, count]) => count > 0).map(([toyKey, count]) => (
+              <div key={toyKey} className="flex items-center gap-0.5 text-white text-xs bg-blue-800/50 rounded px-1">
+                {currentEra.toys[toyKey]?.icon}<span className="font-bold">{count}</span>
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
       {/* Toy Chest - shows goal and built toys */}
@@ -1041,9 +1081,10 @@ export default function SantasLogistics() {
                 const affordableOrderIds = new Set();
 
                 for (const order of orders) {
-                  // Skip orders already being crafted
-                  const isCrafting = Object.values(workshopJobs).some(job => job && job.orderId === order.id);
-                  if (isCrafting || order.status === 'expiring') continue;
+                  // Skip orders that are being crafted or have toys in inventory
+                  const isCrafting = Object.values(workshopJobs).some(job => job && job.toyKey === order.toyKey);
+                  const hasInInventory = (toyInventory[order.toyKey] || 0) > 0;
+                  if (isCrafting || hasInInventory || order.status === 'expiring') continue;
 
                   // Check if we can afford this order with remaining resources
                   let canAfford = true;
@@ -1066,12 +1107,13 @@ export default function SantasLogistics() {
                 return orders.map((order, index) => {
                   // Default to first order if none selected
                   const isExpanded = expandedOrder === order.id || (expandedOrder === null && index === 0);
-                  const isCrafting = Object.values(workshopJobs).some(job => job && job.orderId === order.id);
+                  const isCrafting = Object.values(workshopJobs).some(job => job && job.toyKey === order.toyKey);
+                  const hasInInventory = (toyInventory[order.toyKey] || 0) >= (order.quantity - order.completed);
                   const canAfford = affordableOrderIds.has(order.id);
                   const isExpiring = order.status === 'expiring';
                   return (
                     <div key={order.id} onClick={() => !isExpiring && setExpandedOrder(order.id)}
-                      className={`flex-shrink-0 rounded-lg p-2 border text-xs cursor-pointer transition-all ${isExpiring ? 'bg-red-600 border-red-400' : isCrafting ? 'bg-green-900/50 border-green-500' : canAfford ? 'bg-yellow-900/40 border-yellow-600' : 'bg-red-950/30 border-red-900/50 opacity-60'} ${isExpanded ? 'min-w-36' : 'min-w-20'}`}
+                      className={`flex-shrink-0 rounded-lg p-2 border text-xs cursor-pointer transition-all ${isExpiring ? 'bg-red-600 border-red-400' : hasInInventory ? 'bg-blue-900/50 border-blue-500' : isCrafting ? 'bg-green-900/50 border-green-500' : canAfford ? 'bg-yellow-900/40 border-yellow-600' : 'bg-red-950/30 border-red-900/50 opacity-60'} ${isExpanded ? 'min-w-36' : 'min-w-20'}`}
                       style={isExpiring ? { animation: 'orderExpire 0.8s ease-out forwards' } : {}}>
                       <div className="flex justify-between items-center gap-2">
                         <span className="text-white font-bold">{order.toy.icon} x{order.quantity}</span>
@@ -1080,9 +1122,9 @@ export default function SantasLogistics() {
                       <div className="text-amber-300 text-xs truncate">For {order.childName}</div>
                       <div className="flex justify-between items-center mt-1">
                         <span className="text-gray-400">{order.completed}/{order.quantity}</span>
-                        {(isCrafting || !canAfford) && (
-                          <span className={`px-1 rounded ${isCrafting ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-300'}`}>
-                            {isCrafting ? '🔨' : '⏳'}
+                        {(hasInInventory || isCrafting || !canAfford) && (
+                          <span className={`px-1 rounded ${hasInInventory ? 'bg-blue-600 text-white' : isCrafting ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-300'}`}>
+                            {hasInInventory ? '📦' : isCrafting ? '🔨' : '⏳'}
                           </span>
                         )}
                       </div>
