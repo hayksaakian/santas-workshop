@@ -247,6 +247,31 @@ export default function SantasLogistics() {
         // Get current orders from ref (updated by setOrders above)
         let currentOrders = ordersModRef.current || ordersRef.current;
 
+        // Find expired order IDs (orders that are expiring this tick)
+        const expiringOrderIds = new Set(
+          currentOrders.filter(o => o.status === 'expiring').map(o => o.id)
+        );
+
+        // Clean up jobs for expired orders and return resources
+        if (expiringOrderIds.size > 0) {
+          for (const [key, job] of Object.entries(newJobs)) {
+            if (job && expiringOrderIds.has(job.orderId)) {
+              // Find the toy recipe to return resources
+              const toy = currentEra.toys[job.toyKey];
+              if (toy) {
+                setResources(prev => {
+                  const updated = { ...prev };
+                  for (const [res, amount] of Object.entries(toy.recipe)) {
+                    updated[res] = (updated[res] || 0) + amount;
+                  }
+                  return updated;
+                });
+              }
+              delete newJobs[key];
+            }
+          }
+        }
+
         grid.forEach((row, y) => {
           row.forEach((cell, x) => {
             if (!cell) return;
