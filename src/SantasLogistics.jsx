@@ -220,92 +220,108 @@ export default function SantasLogistics() {
         return newProgress;
       });
 
+      // Use a ref to track order modifications across nested setState calls
+      const ordersModRef = { current: null };
+      const jobsModRef = { current: null };
+      const claimedOrderIds = new Set();
+
       setOrders(prevOrders => {
         // First, remove orders that were marked as expiring in the previous tick
         const withoutExpired = prevOrders.filter(order => order.status !== 'expiring');
+        // Also filter out any done orders that might have slipped through
+        const withoutDone = withoutExpired.filter(order => order.status !== 'done');
         // Decrement time and mark newly expiring orders
-        const updatedOrders = withoutExpired.map(order => {
+        const updatedOrders = withoutDone.map(order => {
           const newTimeLeft = order.timeLeft - 1;
-          if (newTimeLeft <= 0 && order.status !== 'done') {
+          if (newTimeLeft <= 0) {
             return { ...order, timeLeft: 0, status: 'expiring' };
           }
           return { ...order, timeLeft: newTimeLeft };
         });
-        let newOrders = updatedOrders;
-        const claimedOrderIds = new Set();
+        ordersModRef.current = updatedOrders;
+        return updatedOrders; // Will be updated again by setWorkshopJobs effect
+      });
 
-        setWorkshopJobs(prevJobs => {
-          const newJobs = { ...prevJobs };
-          grid.forEach((row, y) => {
-            row.forEach((cell, x) => {
-              if (!cell) return;
-              const station = STATIONS[cell];
-              if (!station || !station.isWorkshop) return;
-              const key = `${x}-${y}`;
-              const elfCount = assignedElves[key] || 0;
-              if (elfCount === 0) return;
+      setWorkshopJobs(prevJobs => {
+        const newJobs = { ...prevJobs };
+        // Get current orders from ref (updated by setOrders above)
+        let currentOrders = ordersModRef.current || ordersRef.current;
 
-              let job = newJobs[key];
-              if (job) {
-                // Apply adjacency bonus: +50% per adjacent matching station with elves
-                const adjacentCount = getAdjacentBonus(x, y, cell, grid, assignedElves);
-                const speedMultiplier = 1 + (0.5 * adjacentCount);
-                job = { ...job, progress: job.progress + elfCount * 0.5 * speedMultiplier };
-                newJobs[key] = job;
-                if (job.progress >= job.craftTime) {
-                  newOrders = newOrders.map(o => {
-                    if (o.id === job.orderId) {
-                      const newCompleted = o.completed + 1;
-                      if (newCompleted >= o.quantity) {
-                        const bonus = Math.floor(o.timeLeft / 10) * 10;
-                        const points = o.toy.points * o.quantity + bonus;
-                        // Track in ref instead of nested setState
-                        pendingCompletions.current.count += 1;
-                        pendingCompletions.current.score += points;
-                        pendingCompletions.current.toys.push({ toyKey: o.toyKey, quantity: o.quantity, cellKey: key, toyIcon: o.toy.icon });
-                        return { ...o, completed: newCompleted, status: 'done' };
-                      }
-                      return { ...o, completed: newCompleted };
+        grid.forEach((row, y) => {
+          row.forEach((cell, x) => {
+            if (!cell) return;
+            const station = STATIONS[cell];
+            if (!station || !station.isWorkshop) return;
+            const key = `${x}-${y}`;
+            const elfCount = assignedElves[key] || 0;
+            if (elfCount === 0) return;
+
+            let job = newJobs[key];
+            if (job) {
+              // Apply adjacency bonus: +50% per adjacent matching station with elves
+              const adjacentCount = getAdjacentBonus(x, y, cell, grid, assignedElves);
+              const speedMultiplier = 1 + (0.5 * adjacentCount);
+              job = { ...job, progress: job.progress + elfCount * 0.5 * speedMultiplier };
+              newJobs[key] = job;
+              if (job.progress >= job.craftTime) {
+                currentOrders = currentOrders.map(o => {
+                  if (o.id === job.orderId) {
+                    const newCompleted = o.completed + 1;
+                    if (newCompleted >= o.quantity) {
+                      const bonus = Math.floor(o.timeLeft / 10) * 10;
+                      const points = o.toy.points * o.quantity + bonus;
+                      // Track in ref instead of nested setState
+                      pendingCompletions.current.count += 1;
+                      pendingCompletions.current.score += points;
+                      pendingCompletions.current.toys.push({ toyKey: o.toyKey, quantity: o.quantity, cellKey: key, toyIcon: o.toy.icon });
+                      return { ...o, completed: newCompleted, status: 'done' };
                     }
-                    return o;
-                  });
-                  delete newJobs[key];
-                  job = null;
-                }
-              }
-
-              if (!job) {
-                setResources(prevResources => {
-                  const availableOrder = newOrders.find(o => {
-                    if (o.status === 'done') return false;
-                    if (claimedOrderIds.has(o.id)) return false;
-                    const recipe = o.toy.recipe;
-                    for (const [res, amount] of Object.entries(recipe)) {
-                      if ((prevResources[res] || 0) < amount) return false;
-                    }
-                    return true;
-                  });
-
-                  if (availableOrder) {
-                    claimedOrderIds.add(availableOrder.id);
-                    const recipe = availableOrder.toy.recipe;
-                    const updatedResources = { ...prevResources };
-                    for (const [res, amount] of Object.entries(recipe)) {
-                      updatedResources[res] -= amount;
-                    }
-                    newJobs[key] = { orderId: availableOrder.id, toyKey: availableOrder.toyKey, progress: 0, craftTime: 5 };
-                    return updatedResources;
+                    return { ...o, completed: newCompleted };
                   }
-                  return prevResources;
+                  return o;
                 });
+                delete newJobs[key];
+                job = null;
               }
-            });
+            }
+
+            if (!job) {
+              setResources(prevResources => {
+                const availableOrder = currentOrders.find(o => {
+                  if (o.status === 'done') return false;
+                  if (claimedOrderIds.has(o.id)) return false;
+                  const recipe = o.toy.recipe;
+                  for (const [res, amount] of Object.entries(recipe)) {
+                    if ((prevResources[res] || 0) < amount) return false;
+                  }
+                  return true;
+                });
+
+                if (availableOrder) {
+                  claimedOrderIds.add(availableOrder.id);
+                  const recipe = availableOrder.toy.recipe;
+                  const updatedResources = { ...prevResources };
+                  for (const [res, amount] of Object.entries(recipe)) {
+                    updatedResources[res] -= amount;
+                  }
+                  newJobs[key] = { orderId: availableOrder.id, toyKey: availableOrder.toyKey, progress: 0, craftTime: 5 };
+                  return updatedResources;
+                }
+                return prevResources;
+              });
+            }
           });
-          return newJobs;
         });
-        const finalOrders = newOrders.filter(o => o.status !== 'done');
-        ordersRef.current = finalOrders; // Keep ref in sync
-        return finalOrders;
+
+        // Store modified orders and update state
+        const finalOrders = currentOrders.filter(o => o.status !== 'done');
+        ordersRef.current = finalOrders;
+        jobsModRef.current = newJobs;
+
+        // Update orders state with final filtered list
+        setOrders(finalOrders);
+
+        return newJobs;
       });
 
       // Flush pending completions after all state updates
