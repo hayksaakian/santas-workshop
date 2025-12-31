@@ -60,6 +60,7 @@ export default function SantasLogistics() {
   const [floatingToys, setFloatingToys] = useState([]); // floating toy emoji when crafted
   const [recentResources, setRecentResources] = useState(new Set()); // resources that were just generated (for pulse)
   const [draggingElf, setDraggingElf] = useState(null); // { sourceKey, sourceX, sourceY } when dragging
+  const [floatingNotes, setFloatingNotes] = useState([]); // floating musical notes for synced stations
 
   // Refs for tracking completions during tick (avoids nested setState issues)
   const pendingCompletions = useRef({ count: 0, score: 0, toys: [] });
@@ -103,6 +104,41 @@ export default function SantasLogistics() {
     if (gridSize <= 5) return { station: 'text-2xl', toy: 'text-xl', elf: 'text-sm', plus: 'text-lg', hammer: 'text-sm' };
     return { station: 'text-xl sm:text-2xl', toy: 'text-lg sm:text-xl', elf: 'text-xs sm:text-sm', plus: 'text-lg', hammer: 'text-sm' };
   }, [currentEra?.gridSize]);
+
+  // Helper to count adjacent matching stations with elves (cardinal directions only)
+  const getAdjacentBonus = (x, y, stationType, gridData, elfData) => {
+    const directions = [[0, -1], [0, 1], [-1, 0], [1, 0]]; // up, down, left, right
+    let count = 0;
+    for (const [dx, dy] of directions) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || ny >= gridData.length || nx >= gridData[0].length) continue;
+      const neighborCell = gridData[ny]?.[nx];
+      if (neighborCell === stationType && (elfData[`${nx}-${ny}`] || 0) > 0) {
+        count++;
+      }
+    }
+    return count;
+  };
+
+  // Calculate synced pairs for visual feedback (cells that have adjacency bonus)
+  const syncedCells = useMemo(() => {
+    const synced = new Set();
+    const gridSize = currentEra?.gridSize || 6;
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        const cell = grid[y]?.[x];
+        if (!cell) continue;
+        const elfCount = assignedElves[`${x}-${y}`] || 0;
+        if (elfCount === 0) continue;
+        const bonus = getAdjacentBonus(x, y, cell, grid, assignedElves);
+        if (bonus > 0) {
+          synced.add(`${x}-${y}`);
+        }
+      }
+    }
+    return synced;
+  }, [grid, assignedElves, currentEra?.gridSize]);
 
   const startEra = () => {
     const era = ERAS[currentEraIndex];
@@ -170,7 +206,10 @@ export default function SantasLogistics() {
             const station = STATIONS[cell];
             if (!station || station.isWorkshop) return;
             if (!newProgress[key]) newProgress[key] = 0;
-            newProgress[key] += elfCount * 0.5;
+            // Apply adjacency bonus: +50% per adjacent matching station with elves
+            const adjacentCount = getAdjacentBonus(x, y, cell, grid, assignedElves);
+            const speedMultiplier = 1 + (0.5 * adjacentCount);
+            newProgress[key] += elfCount * 0.5 * speedMultiplier;
             if (newProgress[key] >= station.time) {
               setResources(prev => ({ ...prev, [station.produces]: (prev[station.produces] || 0) + 1 }));
               pendingResources.current.push({ resourceKey: station.produces, cellKey: key });
@@ -208,7 +247,10 @@ export default function SantasLogistics() {
 
               let job = newJobs[key];
               if (job) {
-                job = { ...job, progress: job.progress + elfCount * 0.5 };
+                // Apply adjacency bonus: +50% per adjacent matching station with elves
+                const adjacentCount = getAdjacentBonus(x, y, cell, grid, assignedElves);
+                const speedMultiplier = 1 + (0.5 * adjacentCount);
+                job = { ...job, progress: job.progress + elfCount * 0.5 * speedMultiplier };
                 newJobs[key] = job;
                 if (job.progress >= job.craftTime) {
                   newOrders = newOrders.map(o => {
@@ -351,6 +393,25 @@ export default function SantasLogistics() {
     }
     prevSadChildren.current = sadChildren;
   }, [sadChildren, gamePhase]);
+
+  // Spawn floating musical notes for synced stations
+  useEffect(() => {
+    if (gamePhase !== 'playing' || syncedCells.size === 0) return;
+    const spawnNote = () => {
+      const syncedArray = Array.from(syncedCells);
+      const randomCell = syncedArray[Math.floor(Math.random() * syncedArray.length)];
+      const noteEmoji = ['🎵', '🎶', '♪'][Math.floor(Math.random() * 3)];
+      const newNote = { id: Date.now() + Math.random(), cellKey: randomCell, emoji: noteEmoji };
+      setFloatingNotes(prev => [...prev, newNote]);
+      setTimeout(() => {
+        setFloatingNotes(prev => prev.filter(n => n.id !== newNote.id));
+      }, 1500);
+    };
+    // Spawn a note immediately and then every 800ms
+    spawnNote();
+    const interval = setInterval(spawnNote, 800);
+    return () => clearInterval(interval);
+  }, [gamePhase, syncedCells]);
 
   useEffect(() => {
     if (gamePhase !== 'playing') return;
@@ -1097,6 +1158,33 @@ export default function SantasLogistics() {
                   </div>
                 );
               })}
+              {/* Floating Musical Notes for Synced Stations */}
+              {floatingNotes.map(note => {
+                const cell = cellRefs.current[note.cellKey];
+                const gridEl = gridRef.current;
+                if (!cell || !gridEl) return null;
+                const cellRect = cell.getBoundingClientRect();
+                const gridRect = gridEl.getBoundingClientRect();
+                // Random offset to make notes appear in different spots
+                const offsetX = (Math.random() - 0.5) * cellRect.width * 0.6;
+                const left = cellRect.left - gridRect.left + cellRect.width / 2 + offsetX;
+                const top = cellRect.top - gridRect.top + cellRect.height / 2;
+                return (
+                  <div
+                    key={note.id}
+                    className="absolute pointer-events-none z-30 text-pink-300"
+                    style={{
+                      left: `${left}px`,
+                      top: `${top}px`,
+                      transform: 'translate(-50%, -50%)',
+                      animation: 'floatUp 1.5s ease-out forwards',
+                      textShadow: '0 0 4px rgba(236, 72, 153, 0.8)',
+                    }}
+                  >
+                    {note.emoji}
+                  </div>
+                );
+              })}
               {grid.slice(0, currentEra.gridSize).map((row, y) =>
                 row.slice(0, currentEra.gridSize).map((cell, x) => {
                   const key = `${x}-${y}`;
@@ -1107,6 +1195,7 @@ export default function SantasLogistics() {
                   const isSelected = selectedTile && selectedTile.x === x && selectedTile.y === y;
                   const isDragSource = draggingElf?.sourceKey === key;
                   const isValidDropTarget = draggingElf && cell && key !== draggingElf.sourceKey;
+                  const isSynced = syncedCells.has(key);
                   return (
                     <div key={key} ref={(el) => { if (el) cellRefs.current[key] = el; }}
                       onClick={() => handleCellClick(x, y)}
@@ -1114,8 +1203,9 @@ export default function SantasLogistics() {
                       onTouchMove={handleDragMove}
                       onTouchEnd={handleDragEnd}
                       className={`aspect-square rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all relative overflow-hidden
-                        ${cell ? `${station.color} ${isSelected ? 'border-white ring-2 ring-white' : isValidDropTarget ? 'border-green-400 ring-2 ring-green-400' : 'border-amber-400 hover:border-yellow-300'}` : 'bg-amber-800/30 border-amber-700/50 hover:bg-amber-700/50 hover:border-amber-500'}
-                        ${isDragSource ? 'opacity-50' : ''}`}>
+                        ${cell ? `${station.color} ${isSelected ? 'border-white ring-2 ring-white' : isValidDropTarget ? 'border-green-400 ring-2 ring-green-400' : isSynced ? 'border-pink-400 ring-2 ring-pink-400/50' : 'border-amber-400 hover:border-yellow-300'}` : 'bg-amber-800/30 border-amber-700/50 hover:bg-amber-700/50 hover:border-amber-500'}
+                        ${isDragSource ? 'opacity-50' : ''}`}
+                      style={isSynced ? { boxShadow: '0 0 12px 2px rgba(236, 72, 153, 0.4)' } : undefined}>
                       {cell ? (
                         <>
                           {station.isWorkshop ? (
