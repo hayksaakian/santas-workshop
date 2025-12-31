@@ -59,6 +59,7 @@ export default function SantasLogistics() {
   const [selectedTile, setSelectedTile] = useState(null);
   const [sadChildFlash, setSadChildFlash] = useState(0); // 0 = no flash, 1+ = intensity
   const [sadChildrenNames, setSadChildrenNames] = useState([]);
+  const [usedChildNames, setUsedChildNames] = useState(new Set()); // All names used this era (active, completed, expired)
   const [walkingElves, setWalkingElves] = useState([]); // elves currently animating
   const [recentArrivals, setRecentArrivals] = useState(new Set()); // cells with newly arrived elves
   const [floatingResources, setFloatingResources] = useState([]); // floating emoji animations
@@ -187,6 +188,7 @@ export default function SantasLogistics() {
     setOrdersCompleted(0);
     setSadChildren(0);
     setSadChildrenNames([]);
+    setUsedChildNames(new Set());
     prevSadChildren.current = 0;
     setOrderCount(0);
     setEraScore(0);
@@ -498,8 +500,9 @@ export default function SantasLogistics() {
       setOrders(prev => {
         if (prev.length < 5) {
           setOrderCount(c => c + 1);
-          const usedNames = prev.map(o => o.childName);
-          const newOrders = [...prev, generateOrder(currentEra, orderCount, usedNames)];
+          const newOrder = generateOrder(currentEra, orderCount, Array.from(usedChildNames));
+          setUsedChildNames(names => new Set([...names, newOrder.childName]));
+          const newOrders = [...prev, newOrder];
           ordersRef.current = newOrders;
           return newOrders;
         }
@@ -510,12 +513,13 @@ export default function SantasLogistics() {
       const firstOrder = generateOrder(currentEra, 0, []);
       const secondOrder = generateOrder(currentEra, 0, [firstOrder.childName]);
       const initialOrders = [firstOrder, secondOrder];
+      setUsedChildNames(new Set([firstOrder.childName, secondOrder.childName]));
       ordersRef.current = initialOrders;
       setOrders(initialOrders);
       setOrderCount(2);
     }
     return () => clearInterval(interval);
-  }, [gamePhase, currentEra, orderCount]);
+  }, [gamePhase, currentEra, orderCount, usedChildNames]);
 
   const handleCellClick = (x, y) => {
     const key = `${x}-${y}`;
