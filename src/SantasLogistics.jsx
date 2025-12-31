@@ -195,7 +195,10 @@ export default function SantasLogistics() {
     if (gamePhase !== 'playing') return;
     const interval = setInterval(() => {
       // Count expired orders synchronously using ref (React 18 batches setState)
-      const expiringOrders = ordersRef.current.filter(order => order.timeLeft <= 1 && order.status !== 'done');
+      // Only count orders that are about to expire (timeLeft <= 1) and haven't already been marked as expiring
+      const expiringOrders = ordersRef.current.filter(order =>
+        order.timeLeft <= 1 && order.status !== 'done' && order.status !== 'expiring'
+      );
       const expiredThisTick = expiringOrders.length;
       const expiredChildNames = expiringOrders.map(o => ({ name: o.childName, toy: o.toy.icon }));
 
@@ -356,9 +359,11 @@ export default function SantasLogistics() {
           return order;
         });
 
+        // Always filter out completed orders and sync ref
+        const finalOrders = updatedOrders.filter(o => o.status !== 'done');
+        ordersRef.current = finalOrders;
+
         if (ordersChanged) {
-          const finalOrders = updatedOrders.filter(o => o.status !== 'done');
-          ordersRef.current = finalOrders;
           setOrders(finalOrders);
         }
 
