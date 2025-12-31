@@ -15,12 +15,16 @@ import {
 // GAME LOGIC
 // ============================================
 
-const generateOrder = (era, orderCount) => {
+const generateOrder = (era, orderCount, usedNames = []) => {
   const toyKeys = Object.keys(era.toys);
   const toyKey = toyKeys[Math.floor(Math.random() * toyKeys.length)];
   const toy = era.toys[toyKey];
   const quantity = 1 + Math.floor(orderCount / 8);
-  const childName = CHILDREN_NAMES[Math.floor(Math.random() * CHILDREN_NAMES.length)];
+  // Pick a name not already in use
+  const availableNames = CHILDREN_NAMES.filter(name => !usedNames.includes(name));
+  const childName = availableNames.length > 0
+    ? availableNames[Math.floor(Math.random() * availableNames.length)]
+    : CHILDREN_NAMES[Math.floor(Math.random() * CHILDREN_NAMES.length)]; // Fallback if all names used
   return {
     id: Date.now() + Math.random(),
     toyKey, toy, quantity, childName,
@@ -494,7 +498,8 @@ export default function SantasLogistics() {
       setOrders(prev => {
         if (prev.length < 5) {
           setOrderCount(c => c + 1);
-          const newOrders = [...prev, generateOrder(currentEra, orderCount)];
+          const usedNames = prev.map(o => o.childName);
+          const newOrders = [...prev, generateOrder(currentEra, orderCount, usedNames)];
           ordersRef.current = newOrders;
           return newOrders;
         }
@@ -502,7 +507,9 @@ export default function SantasLogistics() {
       });
     }, 10000);
     if (orders.length === 0) {
-      const initialOrders = [generateOrder(currentEra, 0), generateOrder(currentEra, 0)];
+      const firstOrder = generateOrder(currentEra, 0, []);
+      const secondOrder = generateOrder(currentEra, 0, [firstOrder.childName]);
+      const initialOrders = [firstOrder, secondOrder];
       ordersRef.current = initialOrders;
       setOrders(initialOrders);
       setOrderCount(2);
