@@ -1,11 +1,8 @@
 # UX Improvements TODO
 
-Based on user study findings. Ordered by priority/impact.
+Based on user study findings.
 
-## In Progress
-- [ ]
-
-## To Do
+## Completed
 
 ### 1. Elf Visibility (Observations 1, 2) ✅
 - [x] Add working animation to elves at stations (bobbing/hammering)
@@ -27,12 +24,10 @@ Based on user study findings. Ordered by priority/impact.
 
 ### 5. Grid Improvements (Observation 7) ✅
 - [x] Reduce grid size or make it dynamic per era
-- [ ] Different visual for unused slots
+- [x] Scale icons based on grid size
+
+## Backlog
 
 ### 6. Onboarding (Observation 8)
 - [ ] Add pulsing "tap here" indicator on first play
 - [ ] Guided tutorial for first-time users
-
-## Completed
-- [x] Create user study notes
-- [x] Prioritize findings
